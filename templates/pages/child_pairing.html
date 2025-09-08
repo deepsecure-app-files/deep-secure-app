@@ -1,0 +1,26 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+    <div class="form-container">
+        <h2>Pair with Parent</h2>
+        <p>Please ask your parent for the pairing code and enter it below.</p>
+        
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <ul class="flashes">
+                    {% for message in messages %}
+                        <li>{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('main.pair_child') }}">
+            <div class="form-group">
+                <label for="pairing_code">Pairing Code</label>
+                <input type="text" id="pairing_code" name="pairing_code" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Pair</button>
+        </form>
+    </div>
+{% endblock %}
