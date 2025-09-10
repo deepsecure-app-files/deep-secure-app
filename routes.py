@@ -98,26 +98,6 @@ def signup():
 
     return render_template('pages/signup.html')
 
-@main.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        phone_number = request.form['phone_number']
-        password = request.form['password']
-
-        user = User.query.filter_by(phone_number=phone_number).first()
-        
-        if user and check_password_hash(user.password_hash, password):
-            session['phone_number'] = user.phone_number
-            if user.is_parent:
-                return redirect(url_for('main.parent_dashboard'))
-            else:
-                return redirect(url_for('main.child_dashboard'))
-        else:
-            flash("Invalid phone number or password.", 'danger')
-            return render_template('pages/login.html')
-
-    return render_template('pages/login.html')
-
 @main.route('/logout')
 def logout():
     session.pop('phone_number', None)
