@@ -43,7 +43,10 @@ def home():
             return redirect(url_for('main.parent_dashboard'))
         else:
             return redirect(url_for('main.child_dashboard'))
+    return @main.route("/")
+def home():
     return render_template('pages/home.html')
+
 
 @main.route('/signup', methods=['GET', 'POST'])
 def signup():
