@@ -45,7 +45,6 @@ def home():
             return redirect(url_for('main.child_dashboard'))
     return render_template('pages/home.html')
 
-
 @main.route("/login", methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -54,7 +53,7 @@ def login():
 
         user = User.query.filter_by(phone_number=phone_number).first()
 
-        if user and check_password_hash(user.password, password):
+        if user and check_password_hash(user.password_hash, password):
             session['phone_number'] = phone_number
             if user.is_parent:
                 return redirect(url_for('main.parent_dashboard'))
@@ -82,7 +81,7 @@ def signup():
 
         new_user = User(
             phone_number=phone_number,
-            password=hashed_password,
+            password_hash=hashed_password,
             is_parent=(role == 'parent'),
             is_child=(role == 'child')
         )
