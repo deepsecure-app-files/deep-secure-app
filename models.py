@@ -9,7 +9,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(512), nullable=False)
     is_parent = db.Column(db.Boolean, default=False)
     is_child = db.Column(db.Boolean, default=False)
-    children = db.relationship('Child', backref='parent', lazy=True)
+    children = db.relationship('Child', backref='parent', lazy=True, foreign_keys='Child.parent_id')
 
 class Child(db.Model):
     id = db.Column(db.Integer, primary_key=True)
