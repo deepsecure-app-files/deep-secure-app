@@ -88,8 +88,12 @@ def signup():
         db.session.add(new_user)
         db.session.commit()
 
-        flash("Account created successfully! Please login.", 'success')
-        return redirect(url_for('main.login'))
+        # नया जोड़ा गया कोड
+        session['phone_number'] = phone_number
+        if new_user.is_parent:
+            return redirect(url_for('main.parent_dashboard'))
+        else:
+            return redirect(url_for('main.child_dashboard'))
 
     return render_template('pages/signup.html')
     
