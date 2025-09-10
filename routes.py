@@ -43,7 +43,7 @@ def home():
             return redirect(url_for('main.parent_dashboard'))
         else:
             return redirect(url_for('main.child_dashboard'))
-    @main.route("/")
+@main.route("/")
 def home():
     return render_template('pages/home.html')
 
