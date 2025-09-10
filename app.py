@@ -1,24 +1,21 @@
 from flask import Flask
 from config import Config
 from models import db
-from routes import main as main_blueprint   # fixed import (no dot)
+from routes import main as main_blueprint
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
-
-    # init database
     db.init_app(app)
-
-    # register blueprint
+    
+    # Import and register blueprints
     app.register_blueprint(main_blueprint)
-
-    # setup database with app context
+    
+    # Setup database with app context
     with app.app_context():
         db.create_all()
-
+    
     return app
-
 
 # create the app instance
 app = create_app()
