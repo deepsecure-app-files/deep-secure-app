@@ -1,8 +1,8 @@
 
-from flask import Flask
-from config import Config
-from models import db
-from routes import main as main_blueprint   # fixed import (no dot)
+from .flask import Flask
+from .config import Config
+from .models import db
+from .routes import main as main_blueprint   # fixed import (no dot)
 
 def create_app():
     app = Flask(__name__)
