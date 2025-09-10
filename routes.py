@@ -77,7 +77,7 @@ def signup():
             flash("Phone number already exists. Please login or use a different number.", 'danger')
             return redirect(url_for('main.signup'))
 
-        hashed_password = generate_password_hash(password, method='sha256')
+        hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
 
         new_user = User(
             phone_number=phone_number,
