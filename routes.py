@@ -47,6 +47,28 @@ def home():
 def home():
     return render_template('pages/home.html')
 
+@main.route("/login", methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        phone_number = request.form.get('phone_number')
+        password = request.form.get('password')
+
+        # Find the user by phone number
+        user = User.query.filter_by(phone_number=phone_number).first()
+
+        # Check if user exists and password is correct
+        if user and check_password_hash(user.password, password):
+            # If login is successful
+            session['phone_number'] = phone_number
+            if user.is_parent:
+                return redirect(url_for('main.parent_dashboard'))
+            else:
+                return redirect(url_for('main.child_dashboard'))
+        else:
+            flash("Invalid phone number or password.")
+            return redirect(url_for('main.login'))
+
+    return render_template('pages/login.html')
 
 @main.route('/signup', methods=['GET', 'POST'])
 def signup():
