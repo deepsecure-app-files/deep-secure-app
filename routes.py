@@ -77,7 +77,7 @@ def signup():
             flash("Phone number already exists. Please login or use a different number.", 'danger')
             return redirect(url_for('main.signup'))
 
-        hashed_password = generate_password_hash(password)
+        hashed_password = generate_password_hash(password, method='sha256')
 
         new_user = User(
             phone_number=phone_number,
@@ -88,7 +88,6 @@ def signup():
         db.session.add(new_user)
         db.session.commit()
 
-        # नया जोड़ा गया कोड
         session['phone_number'] = phone_number
         if new_user.is_parent:
             return redirect(url_for('main.parent_dashboard'))
