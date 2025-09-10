@@ -1,5 +1,4 @@
-
-from .flask import Flask
+from flask import Flask
 from .config import Config
 from .models import db
 from .routes import main as main_blueprint   # fixed import (no dot)
