@@ -111,7 +111,8 @@ def parent_dashboard():
     
     parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
     children = parent_user.children
-    
+    print(f"Number of children: {len(children)}")
+
     return render_template('pages/parent_dashboard.html', parent=parent_user, children=children)
 
 @main.route('/add_child', methods=['POST'])
