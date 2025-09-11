@@ -126,8 +126,7 @@ def add_child():
     new_child_entry = Child(
         name=child_name,
         pairing_code=generate_pairing_code(),
-        parent=parent_user,
-        child_id=None
+        parent_id=parent_user.id
     )
 
     db.session.add(new_child_entry)
