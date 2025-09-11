@@ -16,7 +16,7 @@ class Child(db.Model):
     name = db.Column(db.String(100), nullable=False)
     pairing_code = db.Column(db.String(6), unique=True)
     parent_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    child_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True)
+    child_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True, nullable=True)
     last_latitude = db.Column(db.String(255))
     last_longitude = db.Column(db.String(255))
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
