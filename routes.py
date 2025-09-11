@@ -32,10 +32,7 @@ def login_required(f):
             flash("Please log in to access this page.", 'info')
             return redirect(url_for('main.login'))
         return f(*args, **kwargs)
-    return decorated_function
-
-# --- Routes ---
-@main.route('/')
+    @main.route('/')
 def home():
     if 'phone_number' in session:
         user = User.query.filter_by(phone_number=session['phone_number']).first()
@@ -133,6 +130,10 @@ def add_child():
 
     db.session.add(new_child_entry)
     db.session.commit()
+    
+    # Debugging lines to check if the child is saved
+    print(f"Child saved with ID: {new_child_entry.id}")
+    print(f"Pairing code: {new_child_entry.pairing_code}")
 
     flash("Child added successfully! Use the pairing code to link their account.", 'success')
     return redirect(url_for('main.parent_dashboard'))
