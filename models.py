@@ -3,44 +3,24 @@ from datetime import datetime
 
 db = SQLAlchemy()
 
-
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     phone_number = db.Column(db.String(15), unique=True, nullable=False)
     password_hash = db.Column(db.String(512), nullable=False)
     is_parent = db.Column(db.Boolean, default=False)
     is_child = db.Column(db.Boolean, default=False)
-
-    # A parent can have multiple children
-    children = db.relationship(
-        'Child',
-        backref='parent',
-        lazy=True,
-        foreign_keys='Child.parent_id'
-    )
-
+    children = db.relationship('Child', backref='parent', lazy=True, foreign_keys='Child.parent_id')
 
 class Child(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     pairing_code = db.Column(db.String(6), unique=True)
-
-    # Link to parent (User)
     parent_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-
-    # Optional link to the child's own User account
-    child_id = db.Column(
-        db.Integer,
-        db.ForeignKey('user.id'),
-        unique=True,
-        nullable=True   # ✅ final fix
-    )
-
+    child_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True, nullable=True)
     last_latitude = db.Column(db.String(255))
     last_longitude = db.Column(db.String(255))
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     battery_level = db.Column(db.Integer)
-
 
 class Geofence(db.Model):
     id = db.Column(db.Integer, primary_key=True)
