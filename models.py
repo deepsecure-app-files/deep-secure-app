@@ -29,3 +29,4 @@ class Geofence(db.Model):
     latitude = db.Column(db.String(255), nullable=False)
     longitude = db.Column(db.String(255), nullable=False)
     radius = db.Column(db.Integer, nullable=False)
+
