@@ -11,11 +11,11 @@
         <form id="save-geofence-form">
             <div class="form-group">
                 <label for="location_name">Location Name</label>
-                <input type="text" id="location_name" name="location_name" required>
+                <input type="text" id="location_name" name="location_name" class="form-control" required>
             </div>
             <div class="form-group">
                 <label for="radius">Radius (meters)</label>
-                <input type="number" id="radius" name="radius" value="100" required>
+                <input type="number" id="radius" name="radius" class="form-control" value="100" required>
             </div>
             <input type="hidden" id="geofence_lat">
             <input type="hidden" id="geofence_lng">
@@ -23,18 +23,26 @@
         </form>
     </div>
     
-    <h3>Your Geofences</h3>
-    <ul id="geofences-list"></ul>
+    <div class="geofences-list-section">
+        <h3>Your Geofences</h3>
+        <ul id="geofences-list" class="list-group"></ul>
+    </div>
 </div>
 {% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<style>
+    #map {
+        height: 400px;
+        width: 100%;
+        margin-bottom: 20px;
+    }
+</style>
 {% endblock %}
 
 {% block scripts %}
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
 <script>
     var map = L.map('map').setView([25.5941, 85.1376], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -56,8 +64,17 @@
         document.getElementById('geofence_lat').value = e.latlng.lat;
         document.getElementById('geofence_lng').value = e.latlng.lng;
         
-        // Show form
         document.getElementById('geofence-form').style.display = 'block';
+        
+        var currentRadius = parseFloat(document.getElementById('radius').value);
+        if (!isNaN(currentRadius) && currentRadius > 0) {
+            circle = L.circle(e.latlng, {
+                color: 'blue',
+                fillColor: '#30f',
+                fillOpacity: 0.5,
+                radius: currentRadius
+            }).addTo(map);
+        }
     });
     
     document.getElementById('radius').addEventListener('input', function() {
@@ -66,12 +83,15 @@
         }
         if (marker) {
             var latlng = marker.getLatLng();
-            circle = L.circle(latlng, {
-                color: 'blue',
-                fillColor: '#30f',
-                fillOpacity: 0.5,
-                radius: parseFloat(this.value)
-            }).addTo(map);
+            var newRadius = parseFloat(this.value);
+            if (!isNaN(newRadius) && newRadius > 0) {
+                circle = L.circle(latlng, {
+                    color: 'blue',
+                    fillColor: '#30f',
+                    fillOpacity: 0.5,
+                    radius: newRadius
+                }).addTo(map);
+            }
         }
     });
 
@@ -99,9 +119,9 @@
         .then(data => {
             if(data.success) {
                 alert('Geofence saved!');
-                location.reload(); // Reload to show new geofence
+                location.reload(); 
             } else {
-                alert('Error saving geofence.');
+                alert('Error saving geofence: ' + data.message);
             }
         });
     });
@@ -112,19 +132,25 @@
         .then(data => {
             var geofencesList = document.getElementById('geofences-list');
             geofencesList.innerHTML = '';
-            data.geofences.forEach(function(geofence) {
-                var li = document.createElement('li');
-                li.innerHTML = `<strong>${geofence.name}</strong> - Radius: ${geofence.radius}m`;
-                geofencesList.appendChild(li);
-                
-                L.circle([geofence.lat, geofence.lng], {
-                    color: 'blue',
-                    fillColor: '#30f',
-                    fillOpacity: 0.5,
-                    radius: geofence.radius
-                }).addTo(map);
-            });
-        });
+            if (data.geofences && data.geofences.length > 0) {
+                data.geofences.forEach(function(geofence) {
+                    var li = document.createElement('li');
+                    li.className = 'list-group-item';
+                    li.innerHTML = `<strong>${geofence.name}</strong> - Radius: ${geofence.radius}m`;
+                    geofencesList.appendChild(li);
+                    
+                    L.circle([geofence.lat, geofence.lng], {
+                        color: 'blue',
+                        fillColor: '#30f',
+                        fillOpacity: 0.5,
+                        radius: geofence.radius
+                    }).addTo(map);
+                });
+            } else {
+                geofencesList.innerHTML = '<li class="list-group-item">No geofences found.</li>';
+            }
+        })
+        .catch(error => console.error('Error fetching geofences:', error));
     }
 
     loadGeofences();
