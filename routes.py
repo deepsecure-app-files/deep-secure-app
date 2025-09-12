@@ -124,6 +124,7 @@ def add_child():
     child_name = request.form.get('child_name')
 
     new_child_entry = Child(
+        child_id=str(uuid.uuid4()),
         name=child_name,
         pairing_code=generate_pairing_code(),
         parent_id=parent_user.id
@@ -132,7 +133,7 @@ def add_child():
     db.session.add(new_child_entry)
     db.session.commit()
 
-    flash("Child added successfully! Use the pairing code to link their account.", 'success')
+    flash(f"Child added successfully! Use the pairing code to link their account.", 'success')
     return redirect(url_for('main.parent_dashboard'))
 
 @main.route('/child_profile/<int:child_id>')
@@ -188,9 +189,9 @@ def pair_child():
     return render_template('pages/child_pairing.html')
 
 # API to update child's location
-@main.route('/api/update_location/<int:child_id>', methods=['POST'])
+@main.route('/api/update_location/<string:child_id>', methods=['POST'])
 def update_location(child_id):
-    child_profile = Child.query.get(child_id)
+    child_profile = Child.query.filter_by(child_id=child_id).first()
     if not child_profile:
         return jsonify({"success": False, "message": "Child not found."}), 404
 
@@ -211,13 +212,13 @@ def update_location(child_id):
     return jsonify({"success": True, "message": "Location updated."})
 
 # API to get a child's location
-@main.route('/api/get_location/<int:child_id>')
+@main.route('/api/get_location/<string:child_id>')
 @login_required
 def get_location(child_id):
     if not is_parent_user():
         return jsonify({"success": False, "message": "Access Denied."}), 403
     
-    child_profile = Child.query.get(child_id)
+    child_profile = Child.query.filter_by(child_id=child_id).first()
     parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
 
     if not child_profile or child_profile.parent_id != parent_user.id:
@@ -283,3 +284,4 @@ def get_geofences():
     } for f in geofences]
     
     return jsonify({"geofences": geofence_list})
+
