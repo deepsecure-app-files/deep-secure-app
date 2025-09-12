@@ -18,15 +18,9 @@
             <a href="{{ url_for('main.geofence_page') }}" class="btn btn-secondary">
                 <i class="fas fa-map-marked-alt"></i> Create Geofence
             </a>
-
-            <form action="{{ url_for('main.add_child') }}" method="POST">
-                <div class="add-child-group">
-                    <input type="text" name="child_name" placeholder="Child's Name" required>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-user-plus"></i> Add New Child
-                    </button>
-                </div>
-            </form>
+            <a href="{{ url_for('main.add_child_page') }}" class="btn btn-primary">
+                <i class="fas fa-user-plus"></i> Add New Child
+            </a>
         </div>
 
         <div class="children-list-section">
