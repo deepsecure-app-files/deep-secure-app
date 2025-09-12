@@ -49,9 +49,7 @@ def login():
     if request.method == 'POST':
         phone_number = request.form.get('phone_number')
         password = request.form.get('password')
-
         user = User.query.filter_by(phone_number=phone_number).first()
-
         if user and check_password_hash(user.password_hash, password):
             session['phone_number'] = phone_number
             if user.is_parent:
@@ -61,7 +59,6 @@ def login():
         else:
             flash("Invalid phone number or password.", 'danger')
             return render_template('pages/login.html')
-
     return render_template('pages/login.html')
 
 @main.route('/signup', methods=['GET', 'POST'])
@@ -70,14 +67,11 @@ def signup():
         phone_number = request.form['phone_number']
         password = request.form['password']
         role = request.form['role']
-        
         existing_user = User.query.filter_by(phone_number=phone_number).first()
         if existing_user:
             flash("Phone number already exists. Please login or use a different number.", 'danger')
             return redirect(url_for('main.signup'))
-
         hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
-
         new_user = User(
             phone_number=phone_number,
             password_hash=hashed_password,
@@ -86,13 +80,11 @@ def signup():
         )
         db.session.add(new_user)
         db.session.commit()
-
         session['phone_number'] = phone_number
         if new_user.is_parent:
             return redirect(url_for('main.parent_dashboard'))
         else:
             return redirect(url_for('main.child_dashboard'))
-
     return render_template('pages/signup.html')
     
 @main.route('/logout')
@@ -107,11 +99,17 @@ def parent_dashboard():
     if not is_parent_user():
         flash("Access Denied: You are not a parent.", 'danger')
         return redirect(url_for('main.home'))
-    
     parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
     children = parent_user.children
-    
     return render_template('pages/parent_dashboard.html', parent=parent_user, children=children)
+
+@main.route('/add_child_page')
+@login_required
+def add_child_page():
+    if not is_parent_user():
+        flash("Access Denied: You are not a parent.", 'danger')
+        return redirect(url_for('main.home'))
+    return render_template('pages/add_child.html')
 
 @main.route('/add_child', methods=['POST'])
 @login_required
@@ -119,21 +117,16 @@ def add_child():
     if not is_parent_user():
         flash("Access Denied: You are not a parent.", 'danger')
         return redirect(url_for('main.home'))
-
     parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
     child_name = request.form.get('child_name')
-
     new_child_entry = Child(
-        child_id=str(uuid.uuid4()),
         name=child_name,
         pairing_code=generate_pairing_code(),
         parent_id=parent_user.id
     )
-
     db.session.add(new_child_entry)
     db.session.commit()
-
-    flash(f"Child added successfully! Use the pairing code to link their account.", 'success')
+    flash("Child added successfully! Use the pairing code to link their account.", 'success')
     return redirect(url_for('main.parent_dashboard'))
 
 @main.route('/child_profile/<int:child_id>')
@@ -142,14 +135,11 @@ def child_profile(child_id):
     if not is_parent_user():
         flash("Access Denied.", 'danger')
         return redirect(url_for('main.home'))
-        
     parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
     child_profile = Child.query.get(child_id)
-    
     if not child_profile or child_profile.parent_id != parent_user.id:
         flash("Child not found or you don't have access.", 'danger')
         return redirect(url_for('main.parent_dashboard'))
-    
     return render_template('pages/child_profile.html', child=child_profile)
 
 @main.route('/child_dashboard')
@@ -158,13 +148,10 @@ def child_dashboard():
     if not is_child_user():
         flash("Access Denied: You are not a child user.", 'danger')
         return redirect(url_for('main.home'))
-
     child_user = User.query.filter_by(phone_number=session['phone_number']).first()
     child_profile = Child.query.filter_by(child_id=child_user.id).first()
-
     if not child_profile:
         return redirect(url_for('main.pair_child'))
-
     return render_template('pages/child_dashboard.html', child=child_profile)
 
 @main.route('/pair_child', methods=['GET', 'POST'])
@@ -173,9 +160,7 @@ def pair_child():
     if request.method == 'POST':
         pairing_code = request.form.get('pairing_code')
         child_user = User.query.filter_by(phone_number=session['phone_number']).first()
-        
         child_entry = Child.query.filter_by(pairing_code=pairing_code).first()
-        
         if child_entry and not child_entry.child_id:
             child_entry.child_id = child_user.id
             child_entry.pairing_code = None
@@ -185,45 +170,41 @@ def pair_child():
         else:
             flash("Invalid or already used pairing code.", 'danger')
             return redirect(url_for('main.pair_child'))
-
     return render_template('pages/child_pairing.html')
 
 # API to update child's location
-@main.route('/api/update_location/<string:child_id>', methods=['POST'])
-def update_location(child_id):
-    child_profile = Child.query.filter_by(child_id=child_id).first()
+@main.route('/api/update_location', methods=['POST'])
+@login_required
+def update_location():
+    if not is_child_user():
+        return jsonify({"success": False, "message": "Access Denied."}), 403
+    child_user = User.query.filter_by(phone_number=session['phone_number']).first()
+    child_profile = Child.query.filter_by(child_id=child_user.id).first()
     if not child_profile:
         return jsonify({"success": False, "message": "Child not found."}), 404
-
     data = request.get_json()
-    latitude = data.get('latitude')
-    longitude = data.get('longitude')
-    battery = data.get('battery')
-
-    if not all([latitude, longitude]):
-        return jsonify({"success": False, "message": "Missing data."}), 400
-
+    try:
+        latitude = float(data.get('latitude'))
+        longitude = float(data.get('longitude'))
+    except (ValueError, TypeError):
+        return jsonify({"success": False, "message": "Invalid latitude or longitude."}), 400
     child_profile.last_latitude = latitude
     child_profile.last_longitude = longitude
-    child_profile.battery_level = battery
+    child_profile.battery_level = data.get('battery')
     child_profile.last_seen = datetime.utcnow()
     db.session.commit()
-
     return jsonify({"success": True, "message": "Location updated."})
 
 # API to get a child's location
-@main.route('/api/get_location/<string:child_id>')
+@main.route('/api/get_location/<int:child_id>')
 @login_required
 def get_location(child_id):
     if not is_parent_user():
         return jsonify({"success": False, "message": "Access Denied."}), 403
-    
-    child_profile = Child.query.filter_by(child_id=child_id).first()
+    child_profile = Child.query.get(child_id)
     parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
-
     if not child_profile or child_profile.parent_id != parent_user.id:
         return jsonify({"success": False, "message": "Child not found or you don't have access."}), 404
-
     location_data = {
         "latitude": child_profile.last_latitude,
         "longitude": child_profile.last_longitude,
@@ -239,7 +220,6 @@ def geofence_page():
     if not is_parent_user():
         flash("Access Denied: Not a parent user.", 'danger')
         return redirect(url_for('main.home'))
-    
     parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
     return render_template('pages/geofence.html', parent=parent_user)
 
@@ -249,10 +229,8 @@ def geofence_page():
 def save_geofence():
     if not is_parent_user():
         return jsonify({"success": False, "message": "Access Denied."}), 403
-    
     parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
     data = request.get_json()
-
     new_geofence = Geofence(
         parent_id=parent_user.id,
         location_name=data.get('location_name'),
@@ -262,7 +240,6 @@ def save_geofence():
     )
     db.session.add(new_geofence)
     db.session.commit()
-    
     return jsonify({"success": True, "message": "Geofence saved successfully."})
 
 # API to get all geofences for a parent
@@ -271,10 +248,8 @@ def save_geofence():
 def get_geofences():
     if not is_parent_user():
         return jsonify({"success": False, "message": "Access Denied."}), 403
-    
     parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
     geofences = Geofence.query.filter_by(parent_id=parent_user.id).all()
-    
     geofence_list = [{
         "id": f.id,
         "name": f.location_name,
@@ -282,6 +257,4 @@ def get_geofences():
         "lng": f.longitude,
         "radius": f.radius
     } for f in geofences]
-    
     return jsonify({"geofences": geofence_list})
-
