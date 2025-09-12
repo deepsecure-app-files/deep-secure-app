@@ -126,7 +126,7 @@ def add_child():
     )
     db.session.add(new_child_entry)
     db.session.commit()
-    flash("Child added successfully! Use the pairing code to link their account.", 'success')
+    flash(f"Child added successfully! The pairing code is: {new_child_entry.pairing_code}", 'success')
     return redirect(url_for('main.parent_dashboard'))
 
 @main.route('/child_profile/<int:child_id>')
@@ -229,17 +229,27 @@ def geofence_page():
 def save_geofence():
     if not is_parent_user():
         return jsonify({"success": False, "message": "Access Denied."}), 403
+    
     parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
     data = request.get_json()
+
+    try:
+        latitude = float(data.get('latitude'))
+        longitude = float(data.get('longitude'))
+        radius = int(data.get('radius'))
+    except (ValueError, TypeError):
+        return jsonify({"success": False, "message": "Invalid data format."}), 400
+
     new_geofence = Geofence(
         parent_id=parent_user.id,
         location_name=data.get('location_name'),
-        latitude=data.get('latitude'),
-        longitude=data.get('longitude'),
-        radius=data.get('radius')
+        latitude=latitude,
+        longitude=longitude,
+        radius=radius
     )
     db.session.add(new_geofence)
     db.session.commit()
+    
     return jsonify({"success": True, "message": "Geofence saved successfully."})
 
 # API to get all geofences for a parent
