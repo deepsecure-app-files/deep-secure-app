@@ -1,14 +1,15 @@
 from flask import render_template, request, redirect, url_for, session, Blueprint, flash, g, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
-import random, string
+import secrets
 from models import db, User, Child, Geofence
 from datetime import datetime
+import uuid
 
 main = Blueprint('main', __name__)
 
 def generate_pairing_code():
-    return ''.join(random.choices(string.digits, k=6))
+    return secrets.token_hex(3).upper()
 
 def is_parent_user():
     if 'phone_number' not in session:
@@ -135,7 +136,8 @@ def add_child():
         db.session.add(new_child_entry)
         db.session.commit()
 
-        return render_template('pages/child_added.html', child=new_child_entry)
+        flash(f"Child added successfully! The pairing code is: {new_child_entry.pairing_code}", 'success')
+        return redirect(url_for('main.parent_dashboard'))
 
     except Exception as e:
         db.session.rollback()
