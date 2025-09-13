@@ -29,13 +29,13 @@
                             <div class="card-body">
                                 <h5 class="card-title">{{ child.name }}</h5>
                                 <p class="card-text">
-                                    {% if child.child_id %}
-                                        <strong>Status:</strong> Connected
-                                        <a href="{{ url_for('main.child_profile', child_id=child.id) }}" class="btn btn-info btn-sm float-end">View Profile</a>
-                                    {% else %}
+                                    {% if child.pairing_code %}
                                         <strong>Status:</strong> Not Paired
                                         <br>
                                         <small>Pairing Code: {{ child.pairing_code }}</small>
+                                    {% else %}
+                                        <strong>Status:</strong> Connected
+                                        <a href="{{ url_for('main.child_profile', child_id=child.id) }}" class="btn btn-info btn-sm float-end">View Profile</a>
                                     {% endif %}
                                 </p>
                             </div>
