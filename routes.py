@@ -132,14 +132,6 @@ def add_child():
 
         # ✅ नया child जोड़ने के बाद सीधे code दिखाएगा
         return render_template('pages/child_added.html', child=new_child_entry)
-
-    except Exception as e:
-        db.session.rollback()
-        flash("Error while adding child, try again.", 'danger')
-        return redirect(url_for('main.add_child_page'))
-
-@main.route('/add_child', methods=['POST'])
-@login_required
 def add_child():
     if not is_parent_user():
         flash("Access Denied: You are not a parent.", 'danger')
