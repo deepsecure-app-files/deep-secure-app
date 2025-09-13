@@ -1,51 +1,41 @@
 {% extends 'layouts/base.html' %}
 
 {% block content %}
-    <div class="dashboard-container">
-        <h2>Parent Dashboard</h2>
-        
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flashes">
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }}">{{ message }}</div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
-        
-        <div class="dashboard-actions">
-            <a href="{{ url_for('main.add_child_page') }}" class="btn btn-primary">Add New Child</a>
-            <a href="{{ url_for('main.geofence_page') }}" class="btn btn-secondary">Manage Geofences</a>
-        </div>
+<div class="dashboard-container">
+    <h2>Parent Dashboard</h2>
 
-        <div class="child-list mt-4">
-            <h3>Your Children</h3>
-            {% if children %}
-                <div class="row">
-                    {% for child in children %}
-                    <div class="col-md-6 mb-3">
-                        <div class="child-card card">
-                            <div class="card-body">
-                                <h5 class="card-title">{{ child.name }}</h5>
-                                <p class="card-text">
-                                    {% if child.pairing_code %}
-                                        <strong>Status:</strong> Not Paired
-                                        <br>
-                                        <small>Pairing Code: {{ child.pairing_code }}</small>
-                                    {% else %}
-                                        <strong>Status:</strong> Connected
-                                        <a href="{{ url_for('main.child_profile', child_id=child.id) }}" class="btn btn-info btn-sm float-end">View Profile</a>
-                                    {% endif %}
-                                </p>
-                            </div>
+    <div class="dashboard-actions">
+        <a href="{{ url_for('main.add_child_page') }}" class="btn btn-primary">Add New Child</a>
+        <a href="{{ url_for('main.geofence_page') }}" class="btn btn-secondary">Manage Geofences</a>
+    </div>
+
+    <div class="child-list mt-4">
+        <h3>Your Children</h3>
+        {% if children %}
+            <div class="row">
+                {% for child in children %}
+                <div class="col-md-6 mb-3">
+                    <div class="child-card card shadow">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ child.name }}</h5>
+                            <p class="card-text">
+                                {% if child.pairing_code %}
+                                    <strong>Status:</strong> Not Paired <br>
+                                    <strong>Pairing Code:</strong> 
+                                    <span class="text-primary">{{ child.pairing_code }}</span>
+                                {% else %}
+                                    <strong>Status:</strong> Connected
+                                    <a href="{{ url_for('main.child_profile', child_id=child.id) }}" class="btn btn-info btn-sm float-end">View Profile</a>
+                                {% endif %}
+                            </p>
                         </div>
                     </div>
-                    {% endfor %}
                 </div>
-            {% else %}
-                <div class="alert alert-info">You have not added any children yet.</div>
-            {% endif %}
-        </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info">You have not added any children yet.</div>
+        {% endif %}
     </div>
+</div>
 {% endblock %}
