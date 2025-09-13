@@ -1,15 +1,14 @@
 from flask import render_template, request, redirect, url_for, session, Blueprint, flash, g, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
-import secrets
+import random, string
 from models import db, User, Child, Geofence
 from datetime import datetime
-import uuid
 
 main = Blueprint('main', __name__)
 
 def generate_pairing_code():
-    return secrets.token_hex(3).upper()
+    return ''.join(random.choices(string.digits, k=6))
 
 def is_parent_user():
     if 'phone_number' not in session:
@@ -99,39 +98,18 @@ def parent_dashboard():
         return redirect(url_for('main.home'))
     parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
     children = parent_user.children
-    return render_template('pages/parent_dashboard.html', parent=parent_user,
-                          
-                           @main.route('/add_child', methods=['POST'])
+    return render_template('pages/parent_dashboard.html', parent=parent_user, children=children)
+
+@main.route('/add_child_page')
 @login_required
-def add_child():
+def add_child_page():
     if not is_parent_user():
         flash("Access Denied: You are not a parent.", 'danger')
         return redirect(url_for('main.home'))
-    
-    parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
-    child_name = request.form.get('child_name')
+    return render_template('pages/add_child.html')
 
-    if not child_name:
-        flash("Child name cannot be empty.", 'danger')
-        return redirect(url_for('main.add_child_page'))
-
-    try:
-        # ✅ 6 digit random pairing code
-        import random, string
-        new_pairing_code = ''.join(random.choices(string.digits, k=6))
-        while Child.query.filter_by(pairing_code=new_pairing_code).first():
-            new_pairing_code = ''.join(random.choices(string.digits, k=6))
-
-        new_child_entry = Child(
-            name=child_name,
-            pairing_code=new_pairing_code,
-            parent_id=parent_user.id
-        )
-        db.session.add(new_child_entry)
-        db.session.commit()
-
-        # ✅ नया child जोड़ने के बाद सीधे code दिखाएगा
-        return render_template('pages/child_added.html', child=new_child_entry)
+@main.route('/add_child', methods=['POST'])
+@login_required
 def add_child():
     if not is_parent_user():
         flash("Access Denied: You are not a parent.", 'danger')
@@ -157,7 +135,6 @@ def add_child():
         db.session.add(new_child_entry)
         db.session.commit()
 
-        # This part is updated to render a new HTML file directly
         return render_template('pages/child_added.html', child=new_child_entry)
 
     except Exception as e:
