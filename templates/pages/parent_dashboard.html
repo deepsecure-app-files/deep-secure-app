@@ -6,47 +6,45 @@
         
         {% with messages = get_flashed_messages() %}
             {% if messages %}
-                <ul class="flashes">
+                <div class="flashes">
                     {% for message in messages %}
-                        <li>{{ message }}</li>
+                        <div class="alert alert-success">{{ message }}</div>
                     {% endfor %}
-                </ul>
+                </div>
             {% endif %}
         {% endwith %}
-
-        <div class="dashboard-actions card">
-            <a href="{{ url_for('main.geofence_page') }}" class="btn btn-secondary">
-                <i class="fas fa-map-marked-alt"></i> Create Geofence
-            </a>
-            <a href="{{ url_for('main.add_child_page') }}" class="btn btn-primary">
-                <i class="fas fa-user-plus"></i> Add New Child
-            </a>
+        
+        <div class="dashboard-actions">
+            <a href="{{ url_for('main.add_child_page') }}" class="btn btn-primary">Add New Child</a>
+            <a href="{{ url_for('main.geofence_page') }}" class="btn btn-secondary">Manage Geofences</a>
         </div>
 
-        <div class="children-list-section">
+        <div class="child-list mt-4">
             <h3>Your Children</h3>
             {% if children %}
-                {% for child in children %}
-                    <div class="child-card card">
-                        <div class="child-info">
-                            <h4>{{ child.name }}</h4>
-                            <p><strong>Pairing Code:</strong> 
-                                {% if child.pairing_code %}
-                                    <span class="pairing-code">{{ child.pairing_code }}</span>
-                                {% else %}
-                                    <span class="pairing-status">Paired</span>
-                                {% endif %}
-                            </p>
-                            <p><strong>Last Seen:</strong> {{ child.last_seen.strftime('%Y-%m-%d %H:%M:%S') if child.last_seen else 'N/A' }}</p>
-                        </div>
-                        
-                        <div class="child-actions">
-                            <a href="{{ url_for('main.child_profile', child_id=child.id) }}" class="btn btn-secondary">View Profile</a>
+                <div class="row">
+                    {% for child in children %}
+                    <div class="col-md-6 mb-3">
+                        <div class="child-card card">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ child.name }}</h5>
+                                <p class="card-text">
+                                    {% if child.child_id %}
+                                        <strong>Status:</strong> Connected
+                                        <a href="{{ url_for('main.child_profile', child_id=child.id) }}" class="btn btn-info btn-sm float-end">View Profile</a>
+                                    {% else %}
+                                        <strong>Status:</strong> Not Paired
+                                        <br>
+                                        <small>Pairing Code: {{ child.pairing_code }}</small>
+                                    {% endif %}
+                                </p>
+                            </div>
                         </div>
                     </div>
-                {% endfor %}
+                    {% endfor %}
+                </div>
             {% else %}
-                <p>You have not added any children yet.</p>
+                <div class="alert alert-info">You have not added any children yet.</div>
             {% endif %}
         </div>
     </div>
