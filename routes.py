@@ -111,23 +111,34 @@ def add_child_page():
         return redirect(url_for('main.home'))
     return render_template('pages/add_child.html')
 
+# यह सही add_child फ़ंक्शन है जो एरर को हैंडल करता है
 @main.route('/add_child', methods=['POST'])
 @login_required
 def add_child():
     if not is_parent_user():
         flash("Access Denied: You are not a parent.", 'danger')
         return redirect(url_for('main.home'))
+    
     parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
     child_name = request.form.get('child_name')
-    new_child_entry = Child(
-        name=child_name,
-        pairing_code=generate_pairing_code(),
-        parent_id=parent_user.id
-    )
-    db.session.add(new_child_entry)
-    db.session.commit()
-    flash(f"Child added successfully! The pairing code is: {new_child_entry.pairing_code}", 'success')
-    return redirect(url_for('main.parent_dashboard'))
+    
+    try:
+        new_child_entry = Child(
+            name=child_name,
+            pairing_code=generate_pairing_code(),
+            parent_id=parent_user.id
+        )
+        db.session.add(new_child_entry)
+        db.session.commit()
+        flash(f"Child added successfully! The pairing code is: {new_child_entry.pairing_code}", 'success')
+        return redirect(url_for('main.parent_dashboard'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f"An error occurred while adding the child. Please try again.", 'danger')
+        # आप एरर को लॉग भी कर सकते हैं
+        print(f"Error: {e}")
+        return redirect(url_for('main.add_child_page'))
+
 
 @main.route('/child_profile/<int:child_id>')
 @login_required
