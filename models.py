@@ -16,7 +16,7 @@ class Child(db.Model):
     name = db.Column(db.String(100), nullable=False)
     pairing_code = db.Column(db.String(6), unique=True)
     parent_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    child_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True) # unique=True हटा दिया गया
+    child_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     last_latitude = db.Column(db.Float)
     last_longitude = db.Column(db.Float)
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
@@ -29,4 +29,3 @@ class Geofence(db.Model):
     latitude = db.Column(db.Float, nullable=False)
     longitude = db.Column(db.Float, nullable=False)
     radius = db.Column(db.Integer, nullable=False)
-
