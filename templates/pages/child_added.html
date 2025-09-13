@@ -1,0 +1,20 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <div class="card p-4">
+                <h2 class="card-title">Child Added Successfully!</h2>
+                <p class="lead"><strong>{{ child.name }}</strong> has been added to your account.</p>
+                <div class="alert alert-success mt-4" role="alert">
+                    <p class="mb-0">Please share this pairing code with your child to connect:</p>
+                    <h3 class="display-4 fw-bold">{{ child.pairing_code }}</h3>
+                    <small>This code will also be visible on your dashboard until the child is connected.</small>
+                </div>
+                <a href="{{ url_for('main.parent_dashboard') }}" class="btn btn-primary mt-3">Go to Dashboard</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
