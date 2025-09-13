@@ -99,15 +99,44 @@ def parent_dashboard():
         return redirect(url_for('main.home'))
     parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
     children = parent_user.children
-    return render_template('pages/parent_dashboard.html', parent=parent_user, children=children)
-
-@main.route('/add_child_page')
+    return render_template('pages/parent_dashboard.html', parent=parent_user,
+                          
+                           @main.route('/add_child', methods=['POST'])
 @login_required
-def add_child_page():
+def add_child():
     if not is_parent_user():
         flash("Access Denied: You are not a parent.", 'danger')
         return redirect(url_for('main.home'))
-    return render_template('pages/add_child.html')
+    
+    parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
+    child_name = request.form.get('child_name')
+
+    if not child_name:
+        flash("Child name cannot be empty.", 'danger')
+        return redirect(url_for('main.add_child_page'))
+
+    try:
+        # ✅ 6 digit random pairing code
+        import random, string
+        new_pairing_code = ''.join(random.choices(string.digits, k=6))
+        while Child.query.filter_by(pairing_code=new_pairing_code).first():
+            new_pairing_code = ''.join(random.choices(string.digits, k=6))
+
+        new_child_entry = Child(
+            name=child_name,
+            pairing_code=new_pairing_code,
+            parent_id=parent_user.id
+        )
+        db.session.add(new_child_entry)
+        db.session.commit()
+
+        # ✅ नया child जोड़ने के बाद सीधे code दिखाएगा
+        return render_template('pages/child_added.html', child=new_child_entry)
+
+    except Exception as e:
+        db.session.rollback()
+        flash("Error while adding child, try again.", 'danger')
+        return redirect(url_for('main.add_child_page'))
 
 @main.route('/add_child', methods=['POST'])
 @login_required
