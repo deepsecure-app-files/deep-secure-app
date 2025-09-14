@@ -4,6 +4,16 @@
 <div class="dashboard-container">
     <h2>Parent Dashboard</h2>
 
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flashes-container">
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} mt-3">{{ message }}</div>
+        {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
     <div class="dashboard-actions">
         <a href="{{ url_for('main.add_child_page') }}" class="btn btn-primary">Add New Child</a>
         <a href="{{ url_for('main.geofence_page') }}" class="btn btn-secondary">Manage Geofences</a>
