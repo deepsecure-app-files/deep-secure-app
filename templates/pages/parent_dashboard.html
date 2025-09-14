@@ -8,7 +8,16 @@
         <a href="{{ url_for('main.add_child_page') }}" class="btn btn-primary">Add New Child</a>
         <a href="{{ url_for('main.geofence_page') }}" class="btn btn-secondary">Manage Geofences</a>
     <div>
-        
+       {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flashes-container-paring-flashed-parent-dashboard">
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} mt-3">{{ message }}</div>
+    {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+ 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="flashes-container">
