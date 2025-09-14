@@ -20,7 +20,7 @@
  
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
-        <div class="flashes-container">
+        <div class="flashes-container-actions-paring-flashes-on_dashboard">
         {% for category, message in messages %}
           <div class="alert alert-{{ category }} mt-3">{{ message }}</div>
         {% endfor %}
