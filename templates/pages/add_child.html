@@ -1,25 +1,31 @@
 {% extends 'layouts/base.html' %}
 
 {% block content %}
-    <div class="container mt-5">
-        <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="card p-4">
-                    <h2 class="text-center mb-4">Add New Child</h2>
-                    <form action="{{ url_for('main.add_child') }}" method="post">
-                        <div class="form-group mb-3">
-                            <label for="child_name">Child's Name</label>
-                            <input type="text" id="child_name" name="child_name" class="form-control" required>
-                        </div>
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary">Add Child</button>
-                        </div>
-                    </form>
-                    <div class="text-center mt-3">
-                        <a href="{{ url_for('main.parent_dashboard') }}">Back to Dashboard</a>
-                    </div>
-                </div>
-            </div>
+<div class="container">
+    <h2>Add New Child</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flashes-container">
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} mt-3">{{ message }}</div>
+        {% endfor %}
         </div>
+      {% endif %}
+    {% endwith %}
+
+    {% if pairing_code %}
+    <div class="alert alert-success mt-3" role="alert">
+        Child added successfully! The pairing code for {{ child_name }} is: <strong>{{ pairing_code }}</strong>
     </div>
+    {% endif %}
+
+    <form action="{{ url_for('main.add_child') }}" method="post">
+        <div class="mb-3">
+            <label for="child_name" class="form-label">Child's Name</label>
+            <input type="text" class="form-control" id="child_name" name="child_name" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Generate Pairing Code</button>
+    </form>
+</div>
 {% endblock %}
