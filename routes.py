@@ -109,19 +109,19 @@ def add_child_page():
         return redirect(url_for('main.home'))
     return render_template('pages/add_child.html')
 
-@main.route('/add_child', methods=['POST'])
+# This is the new API endpoint to handle adding a child via AJAX
+@main.route('/api/add_child', methods=['POST'])
 @login_required
-def add_child():
+def api_add_child():
     if not is_parent_user():
-        flash("Access Denied: You are not a parent.", 'danger')
-        return redirect(url_for('main.home'))
+        return jsonify({"success": False, "message": "Access Denied."}), 403
     
     parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
-    child_name = request.form.get('child_name')
+    data = request.get_json()
+    child_name = data.get('child_name')
 
     if not child_name:
-        flash("Child name cannot be empty.", 'danger')
-        return redirect(url_for('main.add_child_page'))
+        return jsonify({"success": False, "message": "Child name cannot be empty."}), 400
 
     try:
         new_pairing_code = generate_pairing_code()
@@ -136,14 +136,21 @@ def add_child():
         db.session.add(new_child_entry)
         db.session.commit()
 
-        flash(f"Child added successfully! The pairing code is: {new_child_entry.pairing_code}", 'success')
-        return redirect(url_for('main.parent_dashboard'))
+        return jsonify({
+            "success": True, 
+            "message": "Child added successfully!",
+            "child": {
+                "name": new_child_entry.name,
+                "pairing_code": new_child_entry.pairing_code,
+                "id": new_child_entry.id
+            }
+        })
 
     except Exception as e:
         db.session.rollback()
-        flash(f"An error occurred while adding the child. Please try again.", 'danger')
-        print(f"Error: {e}")
-        return redirect(url_for('main.add_child_page'))
+        print(f"Error adding child: {e}")
+        return jsonify({"success": False, "message": "An error occurred while adding the child. Please try again."}), 500
+
 
 @main.route('/child_profile/<int:child_id>')
 @login_required
