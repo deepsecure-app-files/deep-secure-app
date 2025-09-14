@@ -136,8 +136,10 @@ def add_child():
         db.session.add(new_child_entry)
         db.session.commit()
 
-        flash(f"Child added successfully! The pairing code is: {new_child_entry.pairing_code}", 'success')
-        return redirect(url_for('main.parent_dashboard'))
+        flash("Child added successfully!", 'success')
+        
+        # This is the corrected line
+        return render_template('pages/add_child.html', pairing_code=new_pairing_code, child_name=child_name)
 
     except Exception as e:
         db.session.rollback()
