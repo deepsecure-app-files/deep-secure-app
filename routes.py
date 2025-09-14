@@ -136,10 +136,8 @@ def add_child():
         db.session.add(new_child_entry)
         db.session.commit()
 
-        flash("Child added successfully!", 'success')
-        
-        # This is the corrected line
-        return render_template('pages/add_child.html', pairing_code=new_pairing_code, child_name=child_name)
+        flash(f"Child added successfully! The pairing code is: {new_child_entry.pairing_code}", 'success')
+        return redirect(url_for('main.parent_dashboard'))
 
     except Exception as e:
         db.session.rollback()
@@ -281,3 +279,4 @@ def get_geofences():
         "radius": f.radius
     } for f in geofences]
     return jsonify({"geofences": geofence_list})
+
