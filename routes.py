@@ -53,7 +53,6 @@ def login():
             if user.is_parent:
                 return redirect(url_for('main.parent_dashboard'))
             else:
-                # Check if child is paired before redirecting to dashboard
                 child_profile = Child.query.filter_by(child_id=user.id).first()
                 if child_profile and child_profile.parent_id:
                     return redirect(url_for('main.child_dashboard'))
@@ -84,11 +83,19 @@ def signup():
         db.session.add(new_user)
         db.session.commit()
         
+        # New code to create a Child entry for child users
+        if new_user.is_child:
+            new_child_entry = Child(
+                child_id=new_user.id,
+                name="Unpaired Child"  # A temporary name until paired
+            )
+            db.session.add(new_child_entry)
+            db.session.commit()
+
         session['phone_number'] = phone_number
         if new_user.is_parent:
             return redirect(url_for('main.parent_dashboard'))
         else:
-            # Child users are directed to the pairing page after signup
             return redirect(url_for('main.pair_child'))
     return render_template('pages/signup.html')
     
@@ -183,17 +190,29 @@ def pair_child():
     if request.method == 'POST':
         pairing_code = request.form.get('pairing_code')
         child_user = User.query.filter_by(phone_number=session['phone_number']).first()
+        
+        # Find the Child entry created by the parent
         child_entry = Child.query.filter_by(pairing_code=pairing_code).first()
+        
+        # Find the Child entry for the current child user (who is trying to pair)
+        current_child_profile = Child.query.filter_by(child_id=child_user.id).first()
+        
         if child_entry and not child_entry.child_id:
-            child_entry.child_id = child_user.id
-            child_entry.pairing_code = None
+            # Transfer data from the parent's entry to the child's entry
+            current_child_profile.name = child_entry.name
+            current_child_profile.parent_id = child_entry.parent_id
+            
+            # Delete the parent's temporary entry
+            db.session.delete(child_entry)
             db.session.commit()
+
             flash("Pairing successful! You are now connected to a parent.", 'success')
             return redirect(url_for('main.child_dashboard'))
         else:
             flash("Invalid or already used pairing code.", 'danger')
             return redirect(url_for('main.pair_child'))
     return render_template('pages/child_pairing.html')
+
 
 @main.route('/api/update_location/<int:child_id>', methods=['POST'])
 @login_required
