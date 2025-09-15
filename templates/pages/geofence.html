@@ -1,46 +1,32 @@
 {% extends 'layouts/base.html' %}
-
 {% block content %}
-<div class="geofence-container">
-    <h2>Create Geofence</h2>
-    <p>Click on the map to create a new geofence location.</p>
-    <div id="map" class="map-container"></div>
-    
-    <div class="form-container" id="geofence-form" style="display: none;">
-        <h3>Save Geofence</h3>
-        <form id="save-geofence-form">
-            <div class="form-group">
-                <label for="location_name">Location Name</label>
-                <input type="text" id="location_name" name="location_name" class="form-control" required>
-            </div>
-            <div class="form-group">
-                <label for="radius">Radius (meters)</label>
-                <input type="number" id="radius" name="radius" class="form-control" value="100" required>
-            </div>
-            <input type="hidden" id="geofence_lat">
-            <input type="hidden" id="geofence_lng">
-            <button type="submit" class="btn btn-primary">Save Geofence</button>
-        </form>
-    </div>
-    
-    <div class="geofences-list-section">
+    <div class="geofence-container">
+        <h2>Create Geofence</h2>
+        <p>Click on the map to create a new geofence location.</p>
+        <div id="map" class="map-container"></div>
+        <div class="form-container" id="geofence-form" style="display: none;">
+            <h3>Save Geofence</h3>
+            <form id="save-geofence-form">
+                <div class="form-group">
+                    <label for="location_name">Location Name</label>
+                    <input type="text" id="location_name" name="location_name" required>
+                </div>
+                <div class="form-group">
+                    <label for="radius">Radius (meters)</label>
+                    <input type="number" id="radius" name="radius" value="100" required>
+                </div>
+                <input type="hidden" id="geofence_lat">
+                <input type="hidden" id="geofence_lng">
+                <button type="submit" class="btn btn-primary">Save Geofence</button>
+            </form>
+        </div>
         <h3>Your Geofences</h3>
-        <ul id="geofences-list" class="list-group"></ul>
+        <ul id="geofences-list"></ul>
     </div>
-</div>
 {% endblock %}
-
 {% block styles %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-<style>
-    #map {
-        height: 400px;
-        width: 100%;
-        margin-bottom: 20px;
-    }
-</style>
 {% endblock %}
-
 {% block scripts %}
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
@@ -48,10 +34,8 @@
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
-
     var circle = null;
     var marker = null;
-    
     map.on('click', function(e) {
         if (marker) {
             map.removeLayer(marker);
@@ -59,50 +43,36 @@
         if (circle) {
             map.removeLayer(circle);
         }
-        
         marker = L.marker(e.latlng).addTo(map);
         document.getElementById('geofence_lat').value = e.latlng.lat;
         document.getElementById('geofence_lng').value = e.latlng.lng;
-        
         document.getElementById('geofence-form').style.display = 'block';
-        
-        var currentRadius = parseFloat(document.getElementById('radius').value);
-        if (!isNaN(currentRadius) && currentRadius > 0) {
-            circle = L.circle(e.latlng, {
-                color: 'blue',
-                fillColor: '#30f',
-                fillOpacity: 0.5,
-                radius: currentRadius
-            }).addTo(map);
-        }
+        updateCircle();
     });
-    
     document.getElementById('radius').addEventListener('input', function() {
+        updateCircle();
+    });
+    function updateCircle() {
         if (circle) {
             map.removeLayer(circle);
         }
         if (marker) {
             var latlng = marker.getLatLng();
-            var newRadius = parseFloat(this.value);
-            if (!isNaN(newRadius) && newRadius > 0) {
-                circle = L.circle(latlng, {
-                    color: 'blue',
-                    fillColor: '#30f',
-                    fillOpacity: 0.5,
-                    radius: newRadius
-                }).addTo(map);
-            }
+            var radius = parseFloat(document.getElementById('radius').value);
+            circle = L.circle(latlng, {
+                color: 'blue',
+                fillColor: '#30f',
+                fillOpacity: 0.5,
+                radius: radius
+            }).addTo(map);
         }
-    });
-
+    }
     document.getElementById('save-geofence-form').addEventListener('submit', function(e) {
         e.preventDefault();
-        
         var location_name = document.getElementById('location_name').value;
         var lat = document.getElementById('geofence_lat').value;
         var lng = document.getElementById('geofence_lng').value;
         var radius = document.getElementById('radius').value;
-
         fetch('/api/save_geofence', {
             method: 'POST',
             headers: {
@@ -119,40 +89,37 @@
         .then(data => {
             if(data.success) {
                 alert('Geofence saved!');
-                location.reload(); 
+                document.getElementById('geofence-form').style.display = 'none';
+                loadGeofences();
             } else {
-                alert('Error saving geofence: ' + data.message);
+                alert('Error saving geofence.');
             }
         });
     });
-
     function loadGeofences() {
         fetch('/api/get_geofences')
         .then(response => response.json())
         .then(data => {
             var geofencesList = document.getElementById('geofences-list');
             geofencesList.innerHTML = '';
-            if (data.geofences && data.geofences.length > 0) {
-                data.geofences.forEach(function(geofence) {
-                    var li = document.createElement('li');
-                    li.className = 'list-group-item';
-                    li.innerHTML = `<strong>${geofence.name}</strong> - Radius: ${geofence.radius}m`;
-                    geofencesList.appendChild(li);
-                    
-                    L.circle([geofence.lat, geofence.lng], {
-                        color: 'blue',
-                        fillColor: '#30f',
-                        fillOpacity: 0.5,
-                        radius: geofence.radius
-                    }).addTo(map);
-                });
-            } else {
-                geofencesList.innerHTML = '<li class="list-group-item">No geofences found.</li>';
-            }
-        })
-        .catch(error => console.error('Error fetching geofences:', error));
+            map.eachLayer(function (layer) {
+                if (layer instanceof L.Circle) {
+                    map.removeLayer(layer);
+                }
+            });
+            data.geofences.forEach(function(geofence) {
+                var li = document.createElement('li');
+                li.innerHTML = `<strong>${geofence.name}</strong> - Radius: ${geofence.radius}m`;
+                geofencesList.appendChild(li);
+                L.circle([geofence.lat, geofence.lng], {
+                    color: 'blue',
+                    fillColor: '#30f',
+                    fillOpacity: 0.5,
+                    radius: geofence.radius
+                }).addTo(map);
+            });
+        });
     }
-
     loadGeofences();
 </script>
 {% endblock %}
