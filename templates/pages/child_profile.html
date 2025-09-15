@@ -1,5 +1,4 @@
 {% extends 'layouts/base.html' %}
-
 {% block content %}
     <div class="profile-container">
         <h2>{{ child.name }}'s Profile</h2>
@@ -8,49 +7,52 @@
             <p><strong>Last Seen:</strong> <span id="last_seen">N/A</span></p>
             <p><strong>Battery Level:</strong> <span id="battery_level">N/A</span></p>
         </div>
-
         <div id="map" class="map-container"></div>
-        
         <div class="ad-container" id="ad-banner">
-            </div>
+            <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXX"
+                 crossorigin="anonymous"></script>
+            <ins class="adsbygoogle"
+                 style="display:block"
+                 data-ad-client="ca-pub-XXXXXXXXXXXXX"
+                 data-ad-slot="YYYYYYYYYYYY"
+                 data-ad-format="auto"
+                 data-full-width-responsive="true"></ins>
+            <script>
+                 (adsbygoogle = window.adsbygoogle || []).push({});
+            </script>
+        </div>
     </div>
 {% endblock %}
-
 {% block styles %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 {% endblock %}
-
 {% block scripts %}
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
 <script>
     var childId = {{ child.id }};
     var initialLat = {{ child.last_latitude or 25.5941 }};
     var initialLng = {{ child.last_longitude or 85.1376 }};
-
-    // Initialize the map with the last known location or a default one
     var map = L.map('map').setView([initialLat, initialLng], 13);
-    
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
-
     var marker = L.marker([initialLat, initialLng]).addTo(map);
-
-    // Function to fetch and update location data
     function updateLocation() {
         fetch('/api/get_location/' + childId)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.latitude && data.longitude) {
                     var newLatLng = new L.LatLng(data.latitude, data.longitude);
                     marker.setLatLng(newLatLng);
                     map.setView(newLatLng, 15);
-
-                    // Update UI elements
                     document.getElementById('status').innerText = 'Live';
                     document.getElementById('last_seen').innerText = new Date(data.last_seen).toLocaleString();
-                    document.getElementById('battery_level').innerText = data.battery + '%';
+                    document.getElementById('battery_level').innerText = data.battery ? data.battery + '%' : 'N/A';
                 } else {
                     document.getElementById('status').innerText = 'Offline';
                     document.getElementById('last_seen').innerText = 'N/A';
@@ -62,11 +64,8 @@
                 document.getElementById('status').innerText = 'Offline';
             });
     }
-
-    // Call the update function every 10 seconds
     setInterval(updateLocation, 10000);
-    
-    // Initial call to load location
     updateLocation();
 </script>
 {% endblock %}
+
