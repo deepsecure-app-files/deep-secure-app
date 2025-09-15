@@ -84,6 +84,14 @@ def signup():
         db.session.add(new_user)
         db.session.commit()
         
+        # Add this block for child users
+        if new_user.is_child:
+            new_child_entry = Child(
+                child_id=new_user.id
+            )
+            db.session.add(new_child_entry)
+            db.session.commit()
+
         # New code to create a Child entry for child users
         if new_user.is_child:
             new_child_entry = Child(
