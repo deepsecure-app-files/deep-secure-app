@@ -36,10 +36,15 @@ def login_required(f):
 def home():
     if 'phone_number' in session:
         user = User.query.filter_by(phone_number=session['phone_number']).first()
-        if user.is_parent:
-            return redirect(url_for('main.parent_dashboard'))
-        else:
-            return redirect(url_for('main.child_dashboard'))
+        @main.route('/')
+def home():
+    if 'phone_number' in session:
+        user = User.query.filter_by(phone_number=session['phone_number']).first()
+        if user: # This is the line to add
+            if user.is_parent:
+                return redirect(url_for('main.parent_dashboard'))
+            else:
+                return redirect(url_for('main.child_dashboard'))
     return render_template('pages/home.html')
 
 @main.route("/login", methods=['GET', 'POST'])
