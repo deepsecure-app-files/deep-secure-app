@@ -53,7 +53,12 @@ def login():
             if user.is_parent:
                 return redirect(url_for('main.parent_dashboard'))
             else:
-                return redirect(url_for('main.child_dashboard'))
+                # Check if child is paired before redirecting to dashboard
+                child_profile = Child.query.filter_by(child_id=user.id).first()
+                if child_profile and child_profile.parent_id:
+                    return redirect(url_for('main.child_dashboard'))
+                else:
+                    return redirect(url_for('main.pair_child'))
         else:
             flash("Invalid phone number or password.", 'danger')
             return render_template('pages/login.html')
@@ -78,11 +83,13 @@ def signup():
         )
         db.session.add(new_user)
         db.session.commit()
+        
         session['phone_number'] = phone_number
         if new_user.is_parent:
             return redirect(url_for('main.parent_dashboard'))
         else:
-            return redirect(url_for('main.child_dashboard'))
+            # Child users are directed to the pairing page after signup
+            return redirect(url_for('main.pair_child'))
     return render_template('pages/signup.html')
     
 @main.route('/logout')
@@ -166,7 +173,7 @@ def child_dashboard():
         return redirect(url_for('main.home'))
     child_user = User.query.filter_by(phone_number=session['phone_number']).first()
     child_profile = Child.query.filter_by(child_id=child_user.id).first()
-    if not child_profile:
+    if not child_profile or not child_profile.parent_id:
         return redirect(url_for('main.pair_child'))
     return render_template('pages/child_dashboard.html', child=child_profile)
 
