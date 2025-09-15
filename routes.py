@@ -2,7 +2,7 @@ from flask import render_template, request, redirect, url_for, session, Blueprin
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import secrets
-from models import db, User, Child, Geofence
+from models import db, User, Child, Geofence, LocationHistory
 from datetime import datetime
 import uuid
 
@@ -188,14 +188,14 @@ def pair_child():
             return redirect(url_for('main.pair_child'))
     return render_template('pages/child_pairing.html')
 
-@main.route('/api/update_location', methods=['POST'])
+@main.route('/api/update_location/<int:child_id>', methods=['POST'])
 @login_required
-def update_location():
+def update_location(child_id):
     if not is_child_user():
         return jsonify({"success": False, "message": "Access Denied."}), 403
     child_user = User.query.filter_by(phone_number=session['phone_number']).first()
     child_profile = Child.query.filter_by(child_id=child_user.id).first()
-    if not child_profile:
+    if not child_profile or child_profile.id != child_id:
         return jsonify({"success": False, "message": "Child not found."}), 404
     data = request.get_json()
     try:
@@ -203,6 +203,15 @@ def update_location():
         longitude = float(data.get('longitude'))
     except (ValueError, TypeError):
         return jsonify({"success": False, "message": "Invalid latitude or longitude."}), 400
+    
+    # Save location history
+    new_location = LocationHistory(
+        child_id=child_profile.id,
+        latitude=latitude,
+        longitude=longitude
+    )
+    db.session.add(new_location)
+
     child_profile.last_latitude = latitude
     child_profile.last_longitude = longitude
     child_profile.battery_level = data.get('battery')
