@@ -3,36 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GPS Tracker</title>
+    <title>{{ title }} - Parent Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    {% block styles %}{% endblock %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-    <header>
-        <div class="header-container">
-            <a href="{{ url_for('main.home') }}" class="logo">GPS Tracker</a>
-        </div>
+    <header class="main-header">
+        <nav class="navbar">
+            <a href="{{ url_for('main.home') }}" class="navbar-brand">
+                <i class="fas fa-map-marker-alt"></i> Parent-Child Tracker
+            </a>
+            <div class="navbar-links">
+                {% if 'phone_number' in session %}
+                    <a href="{{ url_for('main.logout') }}">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('main.login') }}">Login</a>
+                {% endif %}
+            </div>
+        </nav>
     </header>
 
     <main class="container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <ul class="flashes">
-                {% for category, message in messages %}
-                    <li class="{{ category }}">{{ message }}</li>
-                {% endfor %}
-                </ul>
-            {% endif %}
-        {% endwith %}
         {% block content %}{% endblock %}
     </main>
 
-    <footer>
-        <p>&copy; 2025 GPS Tracker. All rights reserved.</p>
+    <footer class="main-footer">
+        <p>&copy; 2025 Parent-Child Tracker. All rights reserved.</p>
     </footer>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    {% block scripts %}{% endblock %}
-</body>
+    </body>
 </html>
