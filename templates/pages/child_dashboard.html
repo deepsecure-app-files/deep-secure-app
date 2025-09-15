@@ -1,5 +1,4 @@
 {% extends 'layouts/base.html' %}
-
 {% block content %}
     <div class="dashboard-container">
         <h2>Child Dashboard</h2>
@@ -7,70 +6,34 @@
             <h3>You are connected!</h3>
             <p>Your location is being shared with your parent.</p>
         </div>
-        
         <div class="status-info">
             <p><strong>Status:</strong> <span id="location-status">Initializing...</span></p>
             <p><strong>Last Sent:</strong> <span id="last-sent-time">N/A</span></p>
         </div>
-
         <a href="{{ url_for('main.logout') }}" class="btn btn-danger">Logout</a>
     </div>
 {% endblock %}
-
 {% block scripts %}
 <script>
     var isTracking = true;
-
-    // Get the child's ID from a hidden element or a global variable
-    // For now, we assume the child ID is available from the backend
-    var childId = "{{ child.id }}";
-
     function sendLocation() {
         if (!isTracking) {
             console.log("Location tracking is paused.");
             return;
         }
-
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(function(position) {
                 var lat = position.coords.latitude;
                 var lng = position.coords.longitude;
-                var batteryLevel = "N/A"; // Placeholder for now
-
-                // We will add the battery API here later, it's not supported everywhere
-                // navigator.getBattery().then(function(battery) {
-                //     batteryLevel = Math.round(battery.level * 100);
-                // });
-
-                var data = {
-                    latitude: lat,
-                    longitude: lng,
-                    battery: batteryLevel
-                };
-
-                fetch('/api/update_location/' + childId, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-                })
-                .then(response => response.json())
-                .then(result => {
-                    if (result.success) {
-                        console.log("Location sent successfully!");
-                        document.getElementById('location-status').innerText = 'Live';
-                        document.getElementById('last-sent-time').innerText = new Date().toLocaleTimeString();
-                    } else {
-                        console.error("Error sending location:", result.message);
-                        document.getElementById('location-status').innerText = 'Error';
-                    }
-                })
-                .catch(error => {
-                    console.error("Network error:", error);
-                    document.getElementById('location-status').innerText = 'Network Error';
-                });
-
+                var batteryLevel = "N/A";
+                if (navigator.getBattery) {
+                    navigator.getBattery().then(function(battery) {
+                        batteryLevel = Math.round(battery.level * 100);
+                        postLocation(lat, lng, batteryLevel);
+                    });
+                } else {
+                    postLocation(lat, lng, batteryLevel);
+                }
             }, function(error) {
                 console.error("Geolocation error:", error);
                 document.getElementById('location-status').innerText = 'Geolocation Error';
@@ -79,11 +42,36 @@
             document.getElementById('location-status').innerText = 'Geolocation not supported';
         }
     }
-
-    // Send location every 10 seconds
+    function postLocation(lat, lng, batteryLevel) {
+        var data = {
+            latitude: lat,
+            longitude: lng,
+            battery: batteryLevel
+        };
+        fetch('/api/update_location', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                console.log("Location sent successfully!");
+                document.getElementById('location-status').innerText = 'Live';
+                document.getElementById('last-sent-time').innerText = new Date().toLocaleTimeString();
+            } else {
+                console.error("Error sending location:", result.message);
+                document.getElementById('location-status').innerText = 'Error';
+            }
+        })
+        .catch(error => {
+            console.error("Network error:", error);
+            document.getElementById('location-status').innerText = 'Network Error';
+        });
+    }
     setInterval(sendLocation, 10000);
-
-    // Initial call
     sendLocation();
 </script>
 {% endblock %}
