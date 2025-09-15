@@ -1,8 +1,7 @@
 from flask import render_template, flash, redirect, url_for, Blueprint, request, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
-from .models import User, Child, db
-from .forms import LoginForm, RegistrationForm, GeofenceForm # Assuming forms.py exists
-from .utils import calculate_distance
+from .models import User, Child, db, Geofence
+from .forms import LoginForm, RegistrationForm
 from flask_bcrypt import Bcrypt
 
 bcrypt = Bcrypt()
