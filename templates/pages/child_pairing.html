@@ -1,5 +1,4 @@
 {% extends 'layouts/base.html' %}
-
 {% block content %}
     <div class="form-container">
         <h2>Pair with Parent</h2>
@@ -16,6 +15,7 @@
         {% endwith %}
 
         <form method="POST" action="{{ url_for('main.pair_child') }}">
+            {{ form.csrf_token }}
             <div class="form-group">
                 <label for="pairing_code">Pairing Code</label>
                 <input type="text" id="pairing_code" name="pairing_code" required>
