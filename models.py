@@ -1,49 +1,31 @@
-from .app import db
-from flask_login import UserMixin
-import secrets
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
 
-class User(db.Model, UserMixin):
+db = SQLAlchemy()
+
+class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(60), nullable=False)
-    role = db.Column(db.String(20), nullable=False, default='parent')
-    is_active = db.Column(db.Boolean, default=True)
-    
-    # Relationships
-    children = db.relationship('Child', backref='parent', lazy=True)
-    
-    def __repr__(self):
-        return f"User('{self.email}', '{self.role}')"
+    phone_number = db.Column(db.String(15), unique=True, nullable=False)
+    password_hash = db.Column(db.String(512), nullable=False)
+    is_parent = db.Column(db.Boolean, default=False)
+    is_child = db.Column(db.Boolean, default=False)
+    children = db.relationship('Child', backref='parent', lazy=True, foreign_keys='Child.parent_id')
 
 class Child(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    pairing_code = db.Column(db.String(20), unique=True, nullable=False)
-    latitude = db.Column(db.Float)
-    longitude = db.Column(db.Float)
-    battery_level = db.Column(db.Float)
-    
-    # Relationships
-    parent_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    geofences = db.relationship('Geofence', backref='child', lazy=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True)
-    user = db.relationship('User', foreign_keys=[user_id])
-    
-    def __init__(self, **kwargs):
-        super(Child, self).__init__(**kwargs)
-        if not self.pairing_code:
-            self.pairing_code = secrets.token_hex(4).upper()
-
-    def __repr__(self):
-        return f"Child('{self.name}', '{self.pairing_code}')"
+    pairing_code = db.Column(db.String(6), unique=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    child_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    last_latitude = db.Column(db.Float)
+    last_longitude = db.Column(db.Float)
+    last_seen = db.Column(db.DateTime, default=datetime.utcnow)
+    battery_level = db.Column(db.Integer)
 
 class Geofence(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    location_name = db.Column(db.String(255), nullable=False)
     latitude = db.Column(db.Float, nullable=False)
     longitude = db.Column(db.Float, nullable=False)
-    radius = db.Column(db.Float, nullable=False)
-    child_id = db.Column(db.Integer, db.ForeignKey('child.id'), nullable=False)
-
-    def __repr__(self):
-        return f"Geofence('{self.name}', '{self.latitude}', '{self.longitude}')"
+    radius = db.Column(db.Integer, nullable=False)
