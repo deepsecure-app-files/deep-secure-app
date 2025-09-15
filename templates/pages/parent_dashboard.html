@@ -1,51 +1,73 @@
-{% extends 'layouts/base.html' %}
+{% extends "layouts/base.html" %}
+
+{% block title %}Parent Dashboard{% endblock %}
 
 {% block content %}
-    <div class="dashboard-container">
-        <h2>Parent Dashboard</h2>
-        
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <div class="flashes">
-                    {% for message in messages %}
-                        <div class="alert alert-success">{{ message }}</div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
-        
-        <div class="dashboard-actions">
-            <a href="{{ url_for('main.add_child_page') }}" class="btn btn-primary">Add New Child</a>
-            <a href="{{ url_for('main.geofence_page') }}" class="btn btn-secondary">Manage Geofences</a>
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="text-primary mb-4">Hello, Parent!</h1>
+            <p class="lead">Here you can manage your children and their location.</p>
         </div>
+    </div>
 
-        <div class="child-list mt-4">
-            <h3>Your Children</h3>
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Add New Child</h5>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('main.add_child') }}" method="post" class="row g-3">
+                        <div class="col-md-8">
+                            <label for="child_name" class="form-label">Child's Name</label>
+                            <input type="text" class="form-control" id="child_name" name="child_name" required>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">Add Child</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-12">
+            <h2 class="text-secondary mb-4">My Children</h2>
             {% if children %}
                 <div class="row">
                     {% for child in children %}
-                    <div class="col-md-6 mb-3">
-                        <div class="child-card card">
+                    <div class="col-lg-4 col-md-6 mb-4">
+                        <div class="card h-100 shadow-sm">
                             <div class="card-body">
                                 <h5 class="card-title">{{ child.name }}</h5>
-                                <p class="card-text">
-                                    {% if child.pairing_code %}
-                                        <strong>Status:</strong> Not Paired
-                                        <br>
-                                        <small>Pairing Code: {{ child.pairing_code }}</small>
+                                <h6 class="card-subtitle mb-2 text-muted">
+                                    {% if child.child_id %}
+                                        Status: <span class="badge bg-success">Connected</span>
                                     {% else %}
-                                        <strong>Status:</strong> Connected
-                                        <a href="{{ url_for('main.child_profile', child_id=child.id) }}" class="btn btn-info btn-sm float-end">View Profile</a>
+                                        Status: <span class="badge bg-warning text-dark">Not Paired</span>
                                     {% endif %}
-                                </p>
+                                </h6>
+
+                                {% if child.pairing_code %}
+                                    <p class="card-text">
+                                        Pairing Code: <strong class="text-primary">{{ child.pairing_code }}</strong>
+                                    </p>
+                                {% endif %}
+
+                                <a href="{{ url_for('main.child_profile', child_id=child.id) }}" class="btn btn-outline-primary mt-3">View Profile</a>
                             </div>
                         </div>
                     </div>
                     {% endfor %}
                 </div>
             {% else %}
-                <div class="alert alert-info">You have not added any children yet.</div>
+                <div class="alert alert-info" role="alert">
+                    You have not added any children yet. Use the form above to get started!
+                </div>
             {% endif %}
         </div>
     </div>
+</div>
 {% endblock %}
