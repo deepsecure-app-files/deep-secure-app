@@ -1,41 +1,61 @@
-from flask import render_template, request, redirect, url_for, session, Blueprint, flash, g, jsonify
+from flask import render_template, request, redirect, url_for, session, Blueprint, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import secrets
 from models import db, User, Child, Geofence
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 
+# Flask-WTF CSRF Protection (You need to configure this in your app.py)
+from flask_wtf.csrf import CSRFProtect
+
 main = Blueprint('main', __name__)
+
+# --- Helper Functions ---
 
 def generate_pairing_code():
     return secrets.token_hex(3).upper()
 
-def is_parent_user():
-    if 'phone_number' not in session:
-        return False
-    user = User.query.filter_by(phone_number=session['phone_number']).first()
-    return user and user.is_parent
-
-def is_child_user():
-    if 'phone_number' not in session:
-        return False
-    user = User.query.filter_by(phone_number=session['phone_number']).first()
-    return user and user.is_child
+def get_current_user():
+    if 'phone_number' in session:
+        return User.query.filter_by(phone_number=session['phone_number']).first()
+    return None
 
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'phone_number' not in session:
+        if not get_current_user():
             flash("Please log in to access this page.", 'info')
             return redirect(url_for('main.login'))
         return f(*args, **kwargs)
     return decorated_function
 
+def parent_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user = get_current_user()
+        if not user or not user.is_parent:
+            flash("Access Denied: You are not a parent.", 'danger')
+            return redirect(url_for('main.home'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def child_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user = get_current_user()
+        if not user or not user.is_child:
+            flash("Access Denied: You are not a child user.", 'danger')
+            return redirect(url_for('main.home'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# --- Routes ---
+
 @main.route('/')
 def home():
-    if 'phone_number' in session:
-        user = User.query.filter_by(phone_number=session['phone_number']).first()
+    user = get_current_user()
+    if user:
         if user.is_parent:
             return redirect(url_for('main.parent_dashboard'))
         else:
@@ -49,6 +69,7 @@ def login():
         password = request.form.get('password')
         user = User.query.filter_by(phone_number=phone_number).first()
         if user and check_password_hash(user.password_hash, password):
+            session.permanent = True
             session['phone_number'] = phone_number
             if user.is_parent:
                 return redirect(url_for('main.parent_dashboard'))
@@ -56,7 +77,6 @@ def login():
                 return redirect(url_for('main.child_dashboard'))
         else:
             flash("Invalid phone number or password.", 'danger')
-            return render_template('pages/login.html')
     return render_template('pages/login.html')
 
 @main.route('/signup', methods=['GET', 'POST'])
@@ -78,56 +98,45 @@ def signup():
         )
         db.session.add(new_user)
         db.session.commit()
+        session.permanent = True
         session['phone_number'] = phone_number
         if new_user.is_parent:
             return redirect(url_for('main.parent_dashboard'))
         else:
             return redirect(url_for('main.child_dashboard'))
     return render_template('pages/signup.html')
-    
+
 @main.route('/logout')
+@login_required
 def logout():
     session.pop('phone_number', None)
     flash("You have been logged out.", 'info')
     return redirect(url_for('main.home'))
 
 @main.route('/parent_dashboard')
-@login_required
+@parent_required
 def parent_dashboard():
-    if not is_parent_user():
-        flash("Access Denied: You are not a parent.", 'danger')
-        return redirect(url_for('main.home'))
-    parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
+    parent_user = get_current_user()
     children = parent_user.children
     return render_template('pages/parent_dashboard.html', parent=parent_user, children=children)
 
 @main.route('/add_child_page')
-@login_required
+@parent_required
 def add_child_page():
-    if not is_parent_user():
-        flash("Access Denied: You are not a parent.", 'danger')
-        return redirect(url_for('main.home'))
     return render_template('pages/add_child.html')
 
 @main.route('/add_child', methods=['POST'])
-@login_required
+@parent_required
 def add_child():
-    if not is_parent_user():
-        flash("Access Denied: You are not a parent.", 'danger')
-        return redirect(url_for('main.home'))
-    
-    parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
+    parent_user = get_current_user()
     child_name = request.form.get('child_name')
-
     if not child_name:
         flash("Child name cannot be empty.", 'danger')
         return redirect(url_for('main.add_child_page'))
-
     try:
         new_pairing_code = generate_pairing_code()
         while Child.query.filter_by(pairing_code=new_pairing_code).first():
             new_pairing_code = generate_pairing_code()
-
         new_child_entry = Child(
             name=child_name,
             pairing_code=new_pairing_code,
@@ -135,23 +144,17 @@ def add_child():
         )
         db.session.add(new_child_entry)
         db.session.commit()
-
         flash(f"Child added successfully! The pairing code is: {new_child_entry.pairing_code}", 'success')
         return redirect(url_for('main.parent_dashboard'))
-
     except Exception as e:
         db.session.rollback()
-        flash(f"An error occurred while adding the child. Please try again.", 'danger')
-        print(f"Error: {e}")
+        flash("An error occurred while adding the child. Please try again.", 'danger')
         return redirect(url_for('main.add_child_page'))
 
 @main.route('/child_profile/<int:child_id>')
-@login_required
+@parent_required
 def child_profile(child_id):
-    if not is_parent_user():
-        flash("Access Denied.", 'danger')
-        return redirect(url_for('main.home'))
-    parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
+    parent_user = get_current_user()
     child_profile = Child.query.get(child_id)
     if not child_profile or child_profile.parent_id != parent_user.id:
         flash("Child not found or you don't have access.", 'danger')
@@ -159,23 +162,20 @@ def child_profile(child_id):
     return render_template('pages/child_profile.html', child=child_profile)
 
 @main.route('/child_dashboard')
-@login_required
+@child_required
 def child_dashboard():
-    if not is_child_user():
-        flash("Access Denied: You are not a child user.", 'danger')
-        return redirect(url_for('main.home'))
-    child_user = User.query.filter_by(phone_number=session['phone_number']).first()
+    child_user = get_current_user()
     child_profile = Child.query.filter_by(child_id=child_user.id).first()
     if not child_profile:
         return redirect(url_for('main.pair_child'))
     return render_template('pages/child_dashboard.html', child=child_profile)
 
 @main.route('/pair_child', methods=['GET', 'POST'])
-@login_required
+@child_required
 def pair_child():
     if request.method == 'POST':
         pairing_code = request.form.get('pairing_code')
-        child_user = User.query.filter_by(phone_number=session['phone_number']).first()
+        child_user = get_current_user()
         child_entry = Child.query.filter_by(pairing_code=pairing_code).first()
         if child_entry and not child_entry.child_id:
             child_entry.child_id = child_user.id
@@ -189,11 +189,9 @@ def pair_child():
     return render_template('pages/child_pairing.html')
 
 @main.route('/api/update_location', methods=['POST'])
-@login_required
+@child_required
 def update_location():
-    if not is_child_user():
-        return jsonify({"success": False, "message": "Access Denied."}), 403
-    child_user = User.query.filter_by(phone_number=session['phone_number']).first()
+    child_user = get_current_user()
     child_profile = Child.query.filter_by(child_id=child_user.id).first()
     if not child_profile:
         return jsonify({"success": False, "message": "Child not found."}), 404
@@ -211,12 +209,10 @@ def update_location():
     return jsonify({"success": True, "message": "Location updated."})
 
 @main.route('/api/get_location/<int:child_id>')
-@login_required
+@parent_required
 def get_location(child_id):
-    if not is_parent_user():
-        return jsonify({"success": False, "message": "Access Denied."}), 403
+    parent_user = get_current_user()
     child_profile = Child.query.get(child_id)
-    parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
     if not child_profile or child_profile.parent_id != parent_user.id:
         return jsonify({"success": False, "message": "Child not found or you don't have access."}), 404
     location_data = {
@@ -228,48 +224,40 @@ def get_location(child_id):
     return jsonify(location_data)
 
 @main.route('/geofence')
-@login_required
+@parent_required
 def geofence_page():
-    if not is_parent_user():
-        flash("Access Denied: Not a parent user.", 'danger')
-        return redirect(url_for('main.home'))
-    parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
+    parent_user = get_current_user()
     return render_template('pages/geofence.html', parent=parent_user)
 
 @main.route('/api/save_geofence', methods=['POST'])
-@login_required
+@parent_required
 def save_geofence():
-    if not is_parent_user():
-        return jsonify({"success": False, "message": "Access Denied."}), 403
-    
-    parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
+    parent_user = get_current_user()
     data = request.get_json()
-
     try:
         latitude = float(data.get('latitude'))
         longitude = float(data.get('longitude'))
         radius = int(data.get('radius'))
+        location_name = data.get('location_name')
+        if not location_name or not latitude or not longitude or not radius:
+            return jsonify({"success": False, "message": "Missing data."}), 400
     except (ValueError, TypeError):
         return jsonify({"success": False, "message": "Invalid data format."}), 400
-
     new_geofence = Geofence(
         parent_id=parent_user.id,
-        location_name=data.get('location_name'),
+        location_name=location_name,
         latitude=latitude,
         longitude=longitude,
         radius=radius
     )
     db.session.add(new_geofence)
     db.session.commit()
-    
     return jsonify({"success": True, "message": "Geofence saved successfully."})
 
 @main.route('/api/get_geofences')
-@login_required
+@parent_required
 def get_geofences():
-    if not is_parent_user():
-        return jsonify({"success": False, "message": "Access Denied."}), 403
-    parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
+    parent_user = get_current_user()
     geofences = Geofence.query.filter_by(parent_id=parent_user.id).all()
     geofence_list = [{
         "id": f.id,
