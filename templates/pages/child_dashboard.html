@@ -1,31 +1,60 @@
-{% extends 'layouts/base.html' %}
+{% extends "layouts/base.html" %}
+
+{% block title %}Child Dashboard{% endblock %}
+
 {% block content %}
-    <div class="dashboard-container">
-        <h2>Child Dashboard</h2>
-        <div class="child-status-card card">
-            <h3>You are connected!</h3>
-            <p>Your location is being shared with your parent.</p>
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h1 class="text-primary mb-2">Hello, {{ child.name }}!</h1>
+                    <p class="lead text-muted">Your location is being shared with your parent.</p>
+                </div>
+            </div>
         </div>
-        <div class="status-info">
-            <p><strong>Status:</strong> <span id="location-status">Initializing...</span></p>
-            <p><strong>Last Sent:</strong> <span id="last-sent-time">N/A</span></p>
-        </div>
-        <a href="{{ url_for('main.logout') }}" class="btn btn-danger">Logout</a>
     </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Your Live Status</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Location Status:</strong> <span id="location-status" class="badge bg-secondary">Initializing...</span></p>
+                    <p><strong>Last Updated:</strong> <span id="last-sent-time" class="text-muted">N/A</span></p>
+                    <p><strong>Battery Level:</strong> <span id="battery-level" class="text-muted">N/A</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12 text-center">
+            <a href="{{ url_for('main.logout') }}" class="btn btn-danger btn-lg">Logout</a>
+        </div>
+    </div>
+</div>
 {% endblock %}
+
 {% block scripts %}
 <script>
     var isTracking = true;
+    var childId = {{ child.id }};
+    
     function sendLocation() {
         if (!isTracking) {
             console.log("Location tracking is paused.");
             return;
         }
+
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(function(position) {
                 var lat = position.coords.latitude;
                 var lng = position.coords.longitude;
                 var batteryLevel = "N/A";
+
                 if (navigator.getBattery) {
                     navigator.getBattery().then(function(battery) {
                         batteryLevel = Math.round(battery.level * 100);
@@ -34,6 +63,7 @@
                 } else {
                     postLocation(lat, lng, batteryLevel);
                 }
+
             }, function(error) {
                 console.error("Geolocation error:", error);
                 document.getElementById('location-status').innerText = 'Geolocation Error';
@@ -42,13 +72,15 @@
             document.getElementById('location-status').innerText = 'Geolocation not supported';
         }
     }
+
     function postLocation(lat, lng, batteryLevel) {
         var data = {
             latitude: lat,
             longitude: lng,
             battery: batteryLevel
         };
-        fetch('/api/update_location', {
+
+        fetch('/api/update_location/' + childId, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -61,6 +93,7 @@
                 console.log("Location sent successfully!");
                 document.getElementById('location-status').innerText = 'Live';
                 document.getElementById('last-sent-time').innerText = new Date().toLocaleTimeString();
+                document.getElementById('battery-level').innerText = batteryLevel + '%';
             } else {
                 console.error("Error sending location:", result.message);
                 document.getElementById('location-status').innerText = 'Error';
@@ -71,6 +104,7 @@
             document.getElementById('location-status').innerText = 'Network Error';
         });
     }
+
     setInterval(sendLocation, 10000);
     sendLocation();
 </script>
