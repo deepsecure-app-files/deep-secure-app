@@ -9,7 +9,7 @@
             <div class="card shadow-sm">
                 <div class="card-body text-center">
                     <h1 class="text-primary mb-2">Hello, {{ child.name }}!</h1>
-                    <p class="lead text-muted">Your location is being shared with your parent.</p>
+                    <p class="lead text-muted">Your location is being shared with your parent. Keep this page open or in the background for continuous tracking.</p>
                 </div>
             </div>
         </div>
@@ -43,37 +43,40 @@
     var isTracking = true;
     var childId = {{ child.id }};
     
-    function sendLocation() {
+    // Background tracking
+    if ('geolocation' in navigator) {
+      navigator.geolocation.watchPosition(function(position) {
+        var lat = position.coords.latitude;
+        var lng = position.coords.longitude;
+        var batteryLevel = "N/A";
+
+        if (navigator.getBattery) {
+            navigator.getBattery().then(function(battery) {
+                batteryLevel = Math.round(battery.level * 100);
+                postLocation(lat, lng, batteryLevel);
+            });
+        } else {
+            postLocation(lat, lng, batteryLevel);
+        }
+
+      }, function(error) {
+        console.error("Geolocation error:", error);
+        document.getElementById('location-status').innerText = 'Geolocation Error';
+      }, {
+        enableHighAccuracy: true,
+        maximumAge: 10000,
+        timeout: 27000
+      });
+    } else {
+      document.getElementById('location-status').innerText = 'Geolocation not supported';
+    }
+
+    function postLocation(lat, lng, batteryLevel) {
         if (!isTracking) {
             console.log("Location tracking is paused.");
             return;
         }
 
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(function(position) {
-                var lat = position.coords.latitude;
-                var lng = position.coords.longitude;
-                var batteryLevel = "N/A";
-
-                if (navigator.getBattery) {
-                    navigator.getBattery().then(function(battery) {
-                        batteryLevel = Math.round(battery.level * 100);
-                        postLocation(lat, lng, batteryLevel);
-                    });
-                } else {
-                    postLocation(lat, lng, batteryLevel);
-                }
-
-            }, function(error) {
-                console.error("Geolocation error:", error);
-                document.getElementById('location-status').innerText = 'Geolocation Error';
-            });
-        } else {
-            document.getElementById('location-status').innerText = 'Geolocation not supported';
-        }
-    }
-
-    function postLocation(lat, lng, batteryLevel) {
         var data = {
             latitude: lat,
             longitude: lng,
@@ -104,8 +107,5 @@
             document.getElementById('location-status').innerText = 'Network Error';
         });
     }
-
-    setInterval(sendLocation, 10000);
-    sendLocation();
 </script>
 {% endblock %}
