@@ -10,17 +10,19 @@ class User(db.Model):
     is_parent = db.Column(db.Boolean, default=False)
     is_child = db.Column(db.Boolean, default=False)
     children = db.relationship('Child', backref='parent', lazy=True, foreign_keys='Child.parent_id')
+    child_profile = db.relationship('Child', backref='user_profile', lazy=True, foreign_keys='Child.child_id')
+
 
 class Child(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    pairing_code = db.Column(db.String(6), unique=True)
-    parent_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=True) # Changed to nullable=True
+    pairing_code = db.Column(db.String(6), unique=True, nullable=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     child_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    last_latitude = db.Column(db.Float)
-    last_longitude = db.Column(db.Float)
+    last_latitude = db.Column(db.Float, nullable=True)
+    last_longitude = db.Column(db.Float, nullable=True)
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
-    battery_level = db.Column(db.Integer)
+    battery_level = db.Column(db.Integer, nullable=True)
 
 class Geofence(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -36,3 +38,4 @@ class LocationHistory(db.Model):
     latitude = db.Column(db.Float, nullable=False)
     longitude = db.Column(db.Float, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
