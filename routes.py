@@ -63,7 +63,7 @@ def login():
             flash("Invalid phone number or password.", 'danger')
             return render_template('pages/login.html')
     return render_template('pages/login.html')
-    
+
 @main.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -84,21 +84,23 @@ def signup():
         db.session.add(new_user)
         db.session.commit()
         
-        # This is the correct block to keep
+        # Add this block for child users 
+        # New code to create a Child entry for child users
         if new_user.is_child:
             new_child_entry = Child(
-                child_id=new_user.id
+                child_id=new_user.id,
+                name="Unpaired Child"  # A temporary name until paired
             )
             db.session.add(new_child_entry)
             db.session.commit()
-        
+
         session['phone_number'] = phone_number
         if new_user.is_parent:
             return redirect(url_for('main.parent_dashboard'))
         else:
             return redirect(url_for('main.pair_child'))
     return render_template('pages/signup.html')
-  
+    
 @main.route('/logout')
 def logout():
     session.pop('phone_number', None)
