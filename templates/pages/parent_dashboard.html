@@ -1,4 +1,4 @@
-{% extends "layouts/base.html" %}
+{% extends 'layouts/base.html' %}
 
 {% block title %}Parent Dashboard{% endblock %}
 
@@ -6,13 +6,50 @@
 <div class="container-fluid py-4">
     <div class="row">
         <div class="col-12">
-            <h1 class="text-primary mb-4">Hello, Parent!</h1>
-            <p class="lead">Here you can manage your children and their location.</p>
+            <h1 class="text-primary mb-4">Parent Dashboard</h1>
+            <p class="lead">Here you can view your children's location and manage safe zones.</p>
         </div>
     </div>
-
+    
     <div class="row mt-4">
-        <div class="col-12">
+        <div class="col-lg-8 col-md-12">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Live Location</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div id="map" style="height: 400px; width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-12">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">My Children</h5>
+                </div>
+                <div class="card-body">
+                    {% if children %}
+                    <div class="list-group">
+                        {% for child in children %}
+                        <a href="{{ url_for('main.child_profile', child_id=child.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            {{ child.name }}
+                            {% if child.child_id %}
+                                <span class="badge bg-success">Connected</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">Not Paired</span>
+                            {% endif %}
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info mb-0" role="alert">
+                        You have not added any children yet.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">Add New Child</h5>
@@ -31,43 +68,46 @@
             </div>
         </div>
     </div>
-
-    <div class="row mt-5">
-        <div class="col-12">
-            <h2 class="text-secondary mb-4">My Children</h2>
-            {% if children %}
-                <div class="row">
-                    {% for child in children %}
-                    <div class="col-lg-4 col-md-6 mb-4">
-                        <div class="card h-100 shadow-sm">
-                            <div class="card-body">
-                                <h5 class="card-title">{{ child.name }}</h5>
-                                <h6 class="card-subtitle mb-2 text-muted">
-                                    {% if child.child_id %}
-                                        Status: <span class="badge bg-success">Connected</span>
-                                    {% else %}
-                                        Status: <span class="badge bg-warning text-dark">Not Paired</span>
-                                    {% endif %}
-                                </h6>
-
-                                {% if child.pairing_code %}
-                                    <p class="card-text">
-                                        Pairing Code: <strong class="text-primary">{{ child.pairing_code }}</strong>
-                                    </p>
-                                {% endif %}
-
-                                <a href="{{ url_for('main.child_profile', child_id=child.id) }}" class="btn btn-outline-primary mt-3">View Profile</a>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="alert alert-info" role="alert">
-                    You have not added any children yet. Use the form above to get started!
-                </div>
-            {% endif %}
-        </div>
-    </div>
 </div>
+
+{% endblock %}
+
+{% block scripts %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var map = L.map('map').setView([20.5937, 78.9629], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        var markers = {};
+        
+        function updateChildLocations() {
+            fetch('/api/get_location/all')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        data.children.forEach(function(child) {
+                            if (child.latitude && child.longitude) {
+                                if (markers[child.id]) {
+                                    markers[child.id].setLatLng([child.latitude, child.longitude])
+                                        .setPopupContent(child.name + ' - ' + new Date(child.last_seen).toLocaleString());
+                                } else {
+                                    var newMarker = L.marker([child.latitude, child.longitude]).addTo(map)
+                                        .bindPopup(child.name + ' - ' + new Date(child.last_seen).toLocaleString());
+                                    markers[child.id] = newMarker;
+                                }
+                            }
+                        });
+                    }
+                })
+                .catch(error => console.error("Error fetching locations:", error));
+        }
+
+        setInterval(updateChildLocations, 10000);
+        updateChildLocations();
+    });
+</script>
 {% endblock %}
