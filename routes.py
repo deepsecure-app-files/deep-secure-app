@@ -246,6 +246,32 @@ def update_location(child_id):
     db.session.commit()
     return jsonify({"success": True, "message": "Location updated."})
 
+
+# API route to get all children's latest location
+@main.route('/api/get_location/all', methods=['GET'])
+@login_required
+def get_all_locations():
+    try:
+        parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
+        children = Child.query.filter_by(parent_id=parent_user.id).all()
+        
+        locations = []
+        for child in children:
+            if child.last_latitude and child.last_longitude:
+                locations.append({
+                    'id': child.id,
+                    'name': child.name,
+                    'latitude': child.last_latitude,
+                    'longitude': child.last_longitude,
+                    'last_seen': child.last_seen
+                })
+        
+        return jsonify({'success': True, 'children': locations})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @main.route('/api/get_location/<int:child_id>')
 @login_required
 def get_location(child_id):
@@ -315,3 +341,4 @@ def get_geofences():
         "radius": f.radius
     } for f in geofences]
     return jsonify({"geofences": geofence_list})
+    
