@@ -8,7 +8,10 @@
         <div class="col-lg-8 col-md-10">
             <div class="card shadow-lg border-0 rounded-4 mb-4">
                 <div class="card-body p-5 text-center">
-                    <img src="https://via.placeholder.com/150" alt="Child Profile" class="rounded-circle mb-3 border border-3 border-success p-1">
+                    <label for="profile-picture-upload" style="cursor: pointer;">
+                        <img id="profile-picture-preview" src="{{ child.profile_picture_url or 'https://via.placeholder.com/150' }}" alt="Child Profile" class="rounded-circle mb-3 border border-3 border-success p-1">
+                    </label>
+                    <input type="file" id="profile-picture-upload" accept="image/*" class="d-none">
                     <h1 class="display-4 fw-bold text-success">{{ child.name }}</h1>
                     <p class="lead text-muted">आपका स्थान माता-पिता के साथ साझा किया जा रहा है।</p>
                 </div>
@@ -71,51 +74,15 @@
         const batteryLevelEl = document.getElementById('battery-level');
         const batteryIconEl = document.getElementById('battery-icon');
         const geolocationStatusEl = document.getElementById('geolocation-status');
-        const stepCountEl = document.getElementById('step-count');
         const stepsProgressEl = document.getElementById('steps-progress');
         const achievementTextEl = document.getElementById('achievement-text');
+        const stepCountEl = document.getElementById('step-count');
+        const profilePictureUpload = document.getElementById('profile-picture-upload');
+        const profilePicturePreview = document.getElementById('profile-picture-preview');
         const childId = '{{ child.id }}';
 
-        let initialLocation = null;
+        let lastPosition = null;
         let totalSteps = 0;
-
-        function calculateSteps(lat1, lon1, lat2, lon2) {
-            const R = 6371e3; // metres
-            const φ1 = lat1 * Math.PI / 180;
-            const φ2 = lat2 * Math.PI / 180;
-            const Δφ = (lat2-lat1) * Math.PI / 180;
-            const Δλ = (lon2-lon1) * Math.PI / 180;
-
-            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-                      Math.cos(φ1) * Math.cos(φ2) *
-                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-            const distance = R * c;
-            // Assuming 1 step = 0.762 meters (average human step length)
-            const steps = distance / 0.762;
-            return Math.round(steps);
-        }
-
-        function updateSteps(newLatitude, newLongitude) {
-            if (initialLocation) {
-                const steps = calculateSteps(
-                    initialLocation.latitude,
-                    initialLocation.longitude,
-                    newLatitude,
-                    newLongitude
-                );
-                totalSteps += steps;
-                stepCountEl.textContent = `${totalSteps} कदम`;
-                stepsProgressEl.style.width = `${(totalSteps / 10000) * 100}%`;
-                
-                if (totalSteps >= 7200) {
-                    achievementTextEl.textContent = 'नया बैज: सुपर एक्सप्लोरर!';
-                }
-            } else {
-                initialLocation = { latitude: newLatitude, longitude: newLongitude };
-            }
-        }
 
         function updateBatteryIcon(level) {
             const battery = level ? parseFloat(level) : 50; 
@@ -130,24 +97,49 @@
             }
         }
 
+        function calculateSteps(pos1, pos2) {
+            const R = 6371e3; // metres
+            const φ1 = pos1.coords.latitude * Math.PI / 180;
+            const φ2 = pos2.coords.latitude * Math.PI / 180;
+            const Δφ = (pos2.coords.latitude - pos1.coords.latitude) * Math.PI / 180;
+            const Δλ = (pos2.coords.longitude - pos1.coords.longitude) * Math.PI / 180;
+
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+            const distance = R * c;
+            const steps = distance / 0.762;
+            return Math.round(steps);
+        }
+
         function sendLocation() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
                         geolocationStatusEl.classList.add('d-none');
-                        const { latitude, longitude } = position.coords;
                         
-                        updateSteps(latitude, longitude);
+                        if (lastPosition) {
+                            const steps = calculateSteps(lastPosition, position);
+                            totalSteps += steps;
+                            stepCountEl.textContent = `${totalSteps} कदम`;
+                            stepsProgressEl.style.width = `${(totalSteps / 10000) * 100}%`;
+                            if (totalSteps >= 7200) {
+                                achievementTextEl.textContent = 'नया बैज: सुपर एक्सप्लोरर!';
+                            }
+                        }
+                        lastPosition = position;
 
                         if (navigator.getBattery) {
                             navigator.getBattery().then(battery => {
                                 const batteryLevel = `${Math.round(battery.level * 100)}%`;
                                 batteryLevelEl.textContent = batteryLevel;
                                 updateBatteryIcon(Math.round(battery.level * 100));
-                                postLocation(latitude, longitude, batteryLevel);
+                                postLocation(position.coords.latitude, position.coords.longitude, batteryLevel);
                             });
                         } else {
-                            postLocation(latitude, longitude, 'N/A');
+                            postLocation(position.coords.latitude, position.coords.longitude, 'N/A');
                         }
                     },
                     (error) => {
@@ -195,7 +187,27 @@
             });
         }
 
-        setInterval(sendLocation, 15000);
+        profilePictureUpload.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    profilePicturePreview.src = e.target.result;
+                }
+                reader.readAsDataURL(file);
+
+                // You need to add server-side code here to handle the file upload
+                // For example:
+                // const formData = new FormData();
+                // formData.append('profile_picture', file);
+                // fetch('/api/upload_profile_picture', {
+                //     method: 'POST',
+                //     body: formData
+                // });
+            }
+        });
+
+        setInterval(sendLocation, 10000); // 10 seconds
         sendLocation();
     });
 </script>
