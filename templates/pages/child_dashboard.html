@@ -21,9 +21,9 @@
                         <h5 class="mb-0 fw-bold text-primary">आज की गतिविधि</h5>
                     </div>
                     <div class="progress" style="height: 10px;">
-                        <div class="progress-bar bg-info" role="progressbar" style="width: 75%;" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"></div>
+                        <div class="progress-bar bg-info" role="progressbar" style="width: 0%;" id="steps-progress" aria-valuenow="0" aria-valuemin="0" aria-valuemax="10000"></div>
                     </div>
-                    <p class="text-center mt-2 mb-0">7,200 कदम</p>
+                    <p class="text-center mt-2 mb-0" id="step-count">0 कदम</p>
                 </div>
             </div>
 
@@ -33,7 +33,7 @@
                         <i class="fas fa-trophy fa-2x me-3"></i>
                         <h5 class="mb-0 fw-bold">उपलब्धियाँ</h5>
                     </div>
-                    <p class="text-white mb-0 mt-2">नया बैज: सुपर एक्सप्लोरर!</p>
+                    <p class="text-white mb-0 mt-2" id="achievement-text">कोई नया बैज नहीं मिला।</p>
                 </div>
             </div>
             
@@ -71,7 +71,51 @@
         const batteryLevelEl = document.getElementById('battery-level');
         const batteryIconEl = document.getElementById('battery-icon');
         const geolocationStatusEl = document.getElementById('geolocation-status');
+        const stepCountEl = document.getElementById('step-count');
+        const stepsProgressEl = document.getElementById('steps-progress');
+        const achievementTextEl = document.getElementById('achievement-text');
         const childId = '{{ child.id }}';
+
+        let initialLocation = null;
+        let totalSteps = 0;
+
+        function calculateSteps(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // metres
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2-lat1) * Math.PI / 180;
+            const Δλ = (lon2-lon1) * Math.PI / 180;
+
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+            const distance = R * c;
+            // Assuming 1 step = 0.762 meters (average human step length)
+            const steps = distance / 0.762;
+            return Math.round(steps);
+        }
+
+        function updateSteps(newLatitude, newLongitude) {
+            if (initialLocation) {
+                const steps = calculateSteps(
+                    initialLocation.latitude,
+                    initialLocation.longitude,
+                    newLatitude,
+                    newLongitude
+                );
+                totalSteps += steps;
+                stepCountEl.textContent = `${totalSteps} कदम`;
+                stepsProgressEl.style.width = `${(totalSteps / 10000) * 100}%`;
+                
+                if (totalSteps >= 7200) {
+                    achievementTextEl.textContent = 'नया बैज: सुपर एक्सप्लोरर!';
+                }
+            } else {
+                initialLocation = { latitude: newLatitude, longitude: newLongitude };
+            }
+        }
 
         function updateBatteryIcon(level) {
             const battery = level ? parseFloat(level) : 50; 
@@ -93,6 +137,8 @@
                         geolocationStatusEl.classList.add('d-none');
                         const { latitude, longitude } = position.coords;
                         
+                        updateSteps(latitude, longitude);
+
                         if (navigator.getBattery) {
                             navigator.getBattery().then(battery => {
                                 const batteryLevel = `${Math.round(battery.level * 100)}%`;
@@ -109,7 +155,6 @@
                         geolocationStatusEl.classList.remove('d-none');
                         geolocationStatusEl.classList.add('alert-danger');
                         
-                        // Check for permission denied error
                         if (error.code === 1) {
                             geolocationStatusEl.innerHTML = 'कृपया अपने डिवाइस की **लोकेशन** चालू करें ताकि आपका स्थान साझा किया जा सके।';
                         } else {
