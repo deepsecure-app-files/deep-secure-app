@@ -1,111 +1,157 @@
-{% extends "layouts/base.html" %}
+{% extends 'layouts/base.html' %}
 
 {% block title %}Child Dashboard{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-body text-center">
-                    <h1 class="text-primary mb-2">Hello, {{ child.name }}!</h1>
-                    <p class="lead text-muted">Your location is being shared with your parent. Keep this page open or in the background for continuous tracking.</p>
+<div class="container-fluid py-4 bg-light">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <div class="card shadow-lg border-0 rounded-4 mb-4">
+                <div class="card-body p-5 text-center">
+                    <img src="https://via.placeholder.com/150" alt="Child Profile" class="rounded-circle mb-3 border border-3 border-success p-1">
+                    <h1 class="display-4 fw-bold text-success">{{ child.name }}</h1>
+                    <p class="lead text-muted">आपका स्थान माता-पिता के साथ साझा किया जा रहा है।</p>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">Your Live Status</h5>
-                </div>
-                <div class="card-body">
-                    <p><strong>Location Status:</strong> <span id="location-status" class="badge bg-secondary">Initializing...</span></p>
-                    <p><strong>Last Updated:</strong> <span id="last-sent-time" class="text-muted">N/A</span></p>
-                    <p><strong>Battery Level:</strong> <span id="battery-level" class="text-muted">N/A</span></p>
+            <div class="card shadow-lg border-0 rounded-4 mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="fas fa-route fa-2x text-primary me-3"></i>
+                        <h5 class="mb-0 fw-bold text-primary">आज की गतिविधि</h5>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-info" role="progressbar" style="width: 75%;" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <p class="text-center mt-2 mb-0">7,200 कदम</p>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <div class="row mt-4">
-        <div class="col-12 text-center">
-            <a href="{{ url_for('main.logout') }}" class="btn btn-danger btn-lg">Logout</a>
+            <div class="card shadow-lg border-0 rounded-4 mb-4">
+                <div class="card-body p-4 bg-warning">
+                    <div class="d-flex align-items-center text-white">
+                        <i class="fas fa-trophy fa-2x me-3"></i>
+                        <h5 class="mb-0 fw-bold">उपलब्धियाँ</h5>
+                    </div>
+                    <p class="text-white mb-0 mt-2">नया बैज: सुपर एक्सप्लोरर!</p>
+                </div>
+            </div>
+            
+            <div class="card shadow-lg border-0 rounded-4 mb-4">
+                <div class="card-body p-4 text-center">
+                    <h5 class="fw-bold">बैटरी और स्टेटस</h5>
+                    <div class="d-flex justify-content-around align-items-center mt-3">
+                        <div>
+                            <i class="fas fa-battery-half fa-3x text-success" id="battery-icon"></i>
+                            <p class="mt-2 mb-0 fw-bold" id="battery-level">N/A</p>
+                        </div>
+                        <div>
+                            <i class="fas fa-map-marker-alt fa-3x text-primary"></i>
+                            <p class="mt-2 mb-0 fw-bold">स्थान: <span id="last-seen">N/A</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="geolocation-status" class="alert d-none mt-3" role="alert"></div>
+
+            <div class="text-center mt-5">
+                <a href="{{ url_for('main.logout') }}" class="btn btn-danger btn-lg rounded-pill px-5 shadow">लॉगआउट</a>
+            </div>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/js/all.min.js"></script>
 <script>
-    var isTracking = true;
-    var childId = {{ child.id }};
-    
-    // Background tracking
-    if ('geolocation' in navigator) {
-      navigator.geolocation.watchPosition(function(position) {
-        var lat = position.coords.latitude;
-        var lng = position.coords.longitude;
-        var batteryLevel = "N/A";
+    document.addEventListener('DOMContentLoaded', function() {
+        const lastSeenEl = document.getElementById('last-seen');
+        const batteryLevelEl = document.getElementById('battery-level');
+        const batteryIconEl = document.getElementById('battery-icon');
+        const geolocationStatusEl = document.getElementById('geolocation-status');
+        const childId = '{{ child.id }}';
 
-        if (navigator.getBattery) {
-            navigator.getBattery().then(function(battery) {
-                batteryLevel = Math.round(battery.level * 100);
-                postLocation(lat, lng, batteryLevel);
-            });
-        } else {
-            postLocation(lat, lng, batteryLevel);
-        }
-
-      }, function(error) {
-        console.error("Geolocation error:", error);
-        document.getElementById('location-status').innerText = 'Geolocation Error';
-      }, {
-        enableHighAccuracy: true,
-        maximumAge: 10000,
-        timeout: 27000
-      });
-    } else {
-      document.getElementById('location-status').innerText = 'Geolocation not supported';
-    }
-
-    function postLocation(lat, lng, batteryLevel) {
-        if (!isTracking) {
-            console.log("Location tracking is paused.");
-            return;
-        }
-
-        var data = {
-            latitude: lat,
-            longitude: lng,
-            battery: batteryLevel
-        };
-
-        fetch('/api/update_location/' + childId, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data)
-        })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                console.log("Location sent successfully!");
-                document.getElementById('location-status').innerText = 'Live';
-                document.getElementById('last-sent-time').innerText = new Date().toLocaleTimeString();
-                document.getElementById('battery-level').innerText = batteryLevel + '%';
+        function updateBatteryIcon(level) {
+            const battery = level ? parseFloat(level) : 50; 
+            if (battery > 75) {
+                batteryIconEl.className = 'fas fa-battery-full fa-3x text-success';
+            } else if (battery > 50) {
+                batteryIconEl.className = 'fas fa-battery-three-quarters fa-3x text-success';
+            } else if (battery > 25) {
+                batteryIconEl.className = 'fas fa-battery-half fa-3x text-warning';
             } else {
-                console.error("Error sending location:", result.message);
-                document.getElementById('location-status').innerText = 'Error';
+                batteryIconEl.className = 'fas fa-battery-quarter fa-3x text-danger';
             }
-        })
-        .catch(error => {
-            console.error("Network error:", error);
-            document.getElementById('location-status').innerText = 'Network Error';
-        });
-    }
+        }
+
+        function sendLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        geolocationStatusEl.classList.add('d-none');
+                        const { latitude, longitude } = position.coords;
+                        
+                        if (navigator.getBattery) {
+                            navigator.getBattery().then(battery => {
+                                const batteryLevel = `${Math.round(battery.level * 100)}%`;
+                                batteryLevelEl.textContent = batteryLevel;
+                                updateBatteryIcon(Math.round(battery.level * 100));
+                                postLocation(latitude, longitude, batteryLevel);
+                            });
+                        } else {
+                            postLocation(latitude, longitude, 'N/A');
+                        }
+                    },
+                    (error) => {
+                        console.error('Geolocation Error:', error);
+                        geolocationStatusEl.classList.remove('d-none');
+                        geolocationStatusEl.classList.add('alert-danger');
+                        
+                        // Check for permission denied error
+                        if (error.code === 1) {
+                            geolocationStatusEl.innerHTML = 'कृपया अपने डिवाइस की **लोकेशन** चालू करें ताकि आपका स्थान साझा किया जा सके।';
+                        } else {
+                            geolocationStatusEl.innerHTML = 'स्थान प्राप्त करने में कोई समस्या हुई। कृपया पुनः प्रयास करें।';
+                        }
+                    },
+                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                );
+            } else {
+                geolocationStatusEl.classList.remove('d-none');
+                geolocationStatusEl.classList.add('alert-danger');
+                geolocationStatusEl.innerHTML = 'आपके ब्राउज़र द्वारा जियोलोकेशन समर्थित नहीं है।';
+            }
+        }
+
+        function postLocation(latitude, longitude, batteryLevel) {
+            fetch(`/api/update_location/${childId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    latitude: latitude,
+                    longitude: longitude,
+                    battery: batteryLevel
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    lastSeenEl.textContent = "अपडेटेड";
+                } else {
+                    console.error('Failed to send location:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Network Error:', error);
+            });
+        }
+
+        setInterval(sendLocation, 15000);
+        sendLocation();
+    });
 </script>
 {% endblock %}
