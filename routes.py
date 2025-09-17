@@ -2,6 +2,7 @@ from flask import render_template, request, redirect, url_for, session, Blueprin
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import secrets
+from models import db, User, Child, Geofence, LocationHistory
 from datetime import datetime
 import uuid
 
