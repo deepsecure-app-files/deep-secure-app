@@ -10,7 +10,7 @@
             <p class="lead">Here you can view your children's location and manage safe zones.</p>
         </div>
     </div>
-    
+
     <div class="row mt-4">
         <div class="col-lg-8 col-md-12">
             <div class="card shadow-sm mb-4">
@@ -76,7 +76,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    window.onload = function() {
         var map = L.map('map').setView([20.5937, 78.9629], 5);
         L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
             maxZoom: 20,
@@ -84,7 +84,7 @@
         }).addTo(map);
 
         var markers = {};
-        
+
         function updateChildLocations() {
             fetch('/api/get_location/all')
                 .then(response => response.json())
@@ -109,6 +109,6 @@
 
         setInterval(updateChildLocations, 10000);
         updateChildLocations();
-    });
+    };
 </script>
 {% endblock %}
