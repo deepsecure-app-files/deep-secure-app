@@ -36,7 +36,7 @@ def login_required(f):
 def home():
     if 'phone_number' in session:
         user = User.query.filter_by(phone_number=session['phone_number']).first()
-        if user: # This is the line to add
+        if user:
             if user.is_parent:
                 return redirect(url_for('main.parent_dashboard'))
             else:
@@ -84,11 +84,10 @@ def signup():
         db.session.add(new_user)
         db.session.commit()
         
-        # New code to create a Child entry for child users
         if new_user.is_child:
             new_child_entry = Child(
                 child_id=new_user.id,
-                name="Unpaired Child"  # A temporary name until paired
+                name="Unpaired Child"
             )
             db.session.add(new_child_entry)
             db.session.commit()
@@ -113,7 +112,7 @@ def parent_dashboard():
         flash("Access Denied: You are not a parent.", 'danger')
         return redirect(url_for('main.home'))
     parent_user = User.query.filter_by(phone_number=session['phone_number']).first()
-    children = parent_user.children
+    children = Child.query.filter_by(parent_id=parent_user.id).all()
     return render_template('pages/parent_dashboard.html', parent=parent_user, children=children)
 
 @main.route('/add_child_page')
@@ -192,18 +191,14 @@ def pair_child():
         pairing_code = request.form.get('pairing_code')
         child_user = User.query.filter_by(phone_number=session['phone_number']).first()
         
-        # Find the Child entry created by the parent
         child_entry = Child.query.filter_by(pairing_code=pairing_code).first()
         
-        # Find the Child entry for the current child user (who is trying to pair)
         current_child_profile = Child.query.filter_by(child_id=child_user.id).first()
         
         if child_entry and not child_entry.child_id:
-            # Transfer data from the parent's entry to the child's entry
             current_child_profile.name = child_entry.name
             current_child_profile.parent_id = child_entry.parent_id
             
-            # Delete the parent's temporary entry
             db.session.delete(child_entry)
             db.session.commit()
 
@@ -231,7 +226,6 @@ def update_location(child_id):
     except (ValueError, TypeError):
         return jsonify({"success": False, "message": "Invalid latitude or longitude."}), 400
     
-    # Save location history
     new_location = LocationHistory(
         child_id=child_profile.id,
         latitude=latitude,
@@ -247,7 +241,6 @@ def update_location(child_id):
     return jsonify({"success": True, "message": "Location updated."})
 
 
-# API route to get all children's latest location
 @main.route('/api/get_location/all', methods=['GET'])
 @login_required
 def get_all_locations():
@@ -341,4 +334,3 @@ def get_geofences():
         "radius": f.radius
     } for f in geofences]
     return jsonify({"geofences": geofence_list})
-    
